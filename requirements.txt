@@ -1,0 +1,5 @@
+# polycentric-labcoat fleet runner — runtime dependencies
+httpx>=0.28,<1
+
+# dev/test only (not needed to import the module):
+#   pytest>=9
