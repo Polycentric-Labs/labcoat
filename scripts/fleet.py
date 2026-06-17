@@ -8,6 +8,10 @@ import os
 import httpx
 from concurrent.futures import ThreadPoolExecutor
 
+# This runner is model-agnostic by design: it holds no fleet roster. The default
+# fleet (mandatory floor: Gemini + OpenAI (GPT) + Grok + DeepSeek) is specified in
+# SKILL.md (the 'fleet' / Phase 2 sections); callers pass the chosen `models` to
+# run_fleet().
 # Known-bad alias -> preferred replacement (extend as discovered).
 _ALIAS_FALLBACK = {"~google/gemini-pro-latest": "google/gemini-2.5-pro"}
 _REASONING_MIN_MAX_TOKENS = 8000
