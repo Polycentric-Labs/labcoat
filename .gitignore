@@ -1,5 +1,16 @@
+# polycentric-labcoat — local ignore rules.
+# Mirrors the public Polycentric-Labs/labcoat .gitignore + protects PRIVATE planning/research scratch.
+
+# Editor / OS / Python artifacts (match the public repo)
 __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
 Thumbs.db
+
+# PRIVATE — must NEVER be published to the public Polycentric-Labs/labcoat repo.
+# Holds the mission charter, pickup prompt, per-session research workspaces, and scratch
+# (may contain personal/political content, project names, client refs). Keep it here, never publish.
+.local/
+_internal/
+.planning/

@@ -8,3 +8,20 @@
 - learn.microsoft.com
 - code.claude.com
 - agents.md
+- sarif-standard/taxonomies (github)
+- docs.oasis-open.org (sarif 2.1.0 spec)
+- pages.nist.gov/oscal (control mapping model)
+- opencre.org / owasp opencre
+- csrc.nist.gov (nist pubs + crosswalks)
+- nist.gov/privacy-framework crosswalks
+- fedramp.gov/notices
+- federalreserve.gov/supervisionreg/srletters
+- occ.gov/news-issuances/bulletins
+- docs.selfhost.credo.ai
+- marketplace.fedramp.gov
+- vercel.com/docs
+- docs.github.com
+- packaging.python.org
+- peps.python.org
+- docs.astral.sh
+- docs.pypi.org

@@ -24,6 +24,17 @@ Every phase ends at a **stop-and-ask gate** — no phase auto-advances past a ma
 5. **Rank + synthesize** — a ruthless ranking with per-item evidence and an honest skip/kill list.
 6. **Capture** — record high-signal sources, hand the synthesis off for cadence-based refresh.
 
+## The autonomous engine (Nuclear)
+
+Beyond the interactive pipeline, `scripts/nuclear.py` runs the same method **unattended in a multi-loop cycle** with an external brain and machine gates (spend tolerance, pacing, a saturation gate), reboot-survivable via an append-only ledger. What is live vs. advisory, stated honestly:
+
+- **Loop-evolution (live).** Each loop after the first re-decomposes from the prior loop's surfaced gaps and contradictions (contradictions first) — the engine *chases* the next question instead of re-asking the same one.
+- **Calibrated saturation gate (live, enforcing).** A control-chart signal (Confirmed-Novelty Yield + an SPC yield-collapse rule, computed only over *confirmed* findings) detects when a run has saturated and **pauses-and-pings the operator — it never auto-stops** (corrigible). Calibrated to `tau=0.30 / floor=0 / window=3` on three diverse multi-loop curves; `--novelty-enforcing` is on by default.
+- **N1 / N3 / N2 novelty cores (built, advisory, deferred adapters).** Literature-grounded novelty (RND-style relative-neighbor-density), combinatorial/analogical synthesis (a MAP-Elites archive + multiplicative novelty×utility + a proposer≠judge separation), and gap/whitespace detection (Swanson-ABC + future-work + contradiction → reconciliation) are pure, unit-tested cores — but their **live data adapters (an external-literature embedding index, the live combinatorial generate-judge-ground loop, concept-graph extraction) are not yet wired.** They score/archive *injected* data today; they do not yet run end-to-end live.
+- **Value axis (advisory).** A quality dimension that stays advisory by design — a value-aware novelty metric is a genuinely-unsolved Goodhart problem, so it is reported, never consumed by the loop's decision.
+
+Operator: `nuclear.py estimate` (free) then `run --tolerance <usd>` (paid, bounded by tolerance + an explicit burn gate). Requires `claude-agent-sdk`.
+
 ## Components
 
 | Path | Role |
@@ -43,10 +54,12 @@ Every phase ends at a **stop-and-ask gate** — no phase auto-advances past a ma
 
 **The fleet runner standalone:**
 ```bash
-pip install -r requirements.txt        # httpx
+pip install -r requirements.txt        # httpx (+ claude-agent-sdk for the Nuclear engine)
 export OPENROUTER_API_KEY=...           # env only — never hardcode, never log
 python -m pytest tests/ -q
 ```
+
+> **Nuclear engine (`scripts/nuclear.py`) additionally requires** `claude-agent-sdk` (already in `requirements.txt`) and the `claude` CLI on PATH.
 `fleet.run_fleet(...)` fans a prompt across models in parallel and returns one structured result per model; the API key never appears in any result. See `SKILL.md` for the call shapes.
 
 The fleet runs against the OpenRouter API via `fleet.py`. *Optional:* you can instead drive it interactively through the third-party [`openrouter-multimodal`](https://github.com/stabgan/openrouter-mcp-multimodal) MCP — it's not required and bundles none of labcoat.

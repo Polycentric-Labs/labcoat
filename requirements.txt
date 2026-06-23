@@ -1,5 +1,9 @@
 # polycentric-labcoat fleet runner — runtime dependencies
 httpx>=0.28,<1
+claude-agent-sdk>=0.2,<1   # required for the §5.2 Nuclear engine (scripts/nuclear.py); the core fleet/research scripts need only httpx
 
 # dev/test only (not needed to import the module):
 #   pytest>=9
+
+# optional (graceful-degrade if absent — redaction_gate.presidio_available() gates it):
+#   presidio-analyzer  # optional Class-B NER PII detection (MIT)

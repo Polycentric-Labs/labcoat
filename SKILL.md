@@ -8,7 +8,7 @@ license: MIT
 
 A 6-phase investigation methodology that fans a question across a live multi-model fleet, then **kills** every finding it can't trace to a primary source, validates the survivors three ways, and hands back a ruthlessly ranked synthesis. It asks you at every gate. It web-grounds every proper noun. It is built to be wrong-proof, not fast.
 
-This skill codifies the method that worked in the 2026-06-01 VM-Deployer + Opportunity-Audit research passes: **harvest → multi-model divergence → hard-skeptic web-grounded verification → 3× adversarial validation → ruthless ranking → standardized synthesis**, writing as you go and asking the user at every gate.
+This skill codifies the method that worked in the 2026-06-01 multi-model research passes: **harvest → multi-model divergence → hard-skeptic web-grounded verification → 3× adversarial validation → ruthless ranking → standardized synthesis**, writing as you go and asking the user at every gate.
 
 ## Why this exists (and why it is NOT redundant)
 
@@ -50,8 +50,8 @@ The most important phase. Do not skip it.
 1. **Decompose** the question into non-overlapping sub-questions. → template `references/output-templates/decomposition.md`.
 2. **Critical-framing pushback.** Challenge the premise *before* spending a dollar. Is this actually two separate investigations? Has it already been done (does a doc exist to refresh via research-resync instead)? Is the framing leading? Is the real question underneath the asked question? Say so plainly.
 3. **Pull relevant PAST research** cross-project (memory, prior pass-notes, sibling-repo docs) so you don't re-investigate what's already known. Cite what you found.
-4. **Redaction gate (interactive + programmatic).** Decide what must NOT leave the machine in any outbound prompt. *Ask the user explicitly* what to redact (client names, internal paths, anything sensitive), then 3×-verify the assembled prompt is clean. The programmatic gate (`redaction_gate.assert_clean`) is necessary-not-sufficient — run it on every outbound prompt *and* do the human pass. See §"The redaction gate".
-5. **Pick a depth tier + show the cost estimate.** Recommend a tier from the scope dial (below), show the dollar estimate, and get explicit confirmation. Exhaustive requires a literal "yes, burn it".
+4. **Redaction gate (interactive + programmatic).** Decide what must NOT leave the machine in any outbound prompt. *Ask the user explicitly* what to redact (client names, internal paths, anything sensitive), then 3×-verify the assembled prompt is clean. The programmatic gate is `redaction_gate.redact(prompt, client_terms=[...])` (v2, two-class): a **Class-A secret → `hard_block`** (HALT + rotate; nothing leaves), a **Class-B path/email/client-term → surgical typed-placeholder redact-and-continue**, with a **`signal.recommend_stop`** flag when the redaction guts the query (pause and ask before sending). It is necessary-not-sufficient — run it on every outbound prompt *and* do the human pass. See §"The redaction gate".
+5. **Pick a depth tier + show the two-line cost estimate + ask a TOLERANCE.** Recommend a tier from the scope dial (below). Show `spend.two_line_estimate(model_specs, n_agents=...)` — **both** lines (the OpenRouter fleet cost *and* the dominant, variable Claude-orchestration cost) plus its `confidence` label (`tight` for a one-off, `very-rough` for a loop cycle) — and ask the user for a spend **TOLERANCE** (the hard ceiling). Get explicit confirmation. Exhaustive requires a literal "yes, burn it".
 
 **Gate:** user signs off on scope, decomposition, depth tier, redaction list, and cost. Nothing fans out until they do.
 
@@ -65,11 +65,13 @@ Gather internal context + answer the decomposed sub-questions with parallel agen
 
 The signature phase. Fan each sub-question across a live, multi-vendor fleet so you get genuine divergence, not one model's opinion.
 
-1. **Route each query** through sonar-router (`route_integration.route_query`) so you use the right web-research tool per query shape. Note: `route_integration.route_query(query)` and any fleet call must run AFTER `redaction_gate.assert_clean(query)` has passed — the query transits a subprocess arg (visible in a process listing) and every outbound prompt must clear the gate first. See §"How it invokes the scripts".
+1. **Route each query** through sonar-router (`route_integration.route_query`) so you use the right web-research tool per query shape. Note: `route_integration.route_query(query)` and any fleet call must run AFTER `redaction_gate.redact(query, client_terms=[...])` clears it (a `hard_block` → HALT; a `signal.recommend_stop` → pause and ask) — the query transits a subprocess arg (visible in a process listing) and every outbound prompt must clear the gate first. **Send the returned `clean_text`, not the raw query.** See §"How it invokes the scripts".
 2. **Check the OpenRouter catalogue LIVE** — `fleet.list_models(api_key)` or the `openrouter-multimodal` MCP `search_models` — never assume a model id from memory; ids drift.
-3. **Recommend a fleet, then ASK** which models for which function. **Mandatory floor: Gemini + OpenAI (GPT) + Grok + DeepSeek.** Add HuggingFace-hosted and other models per the use-case. The point is cross-vendor disagreement.
+3. **Recommend a fleet by comparative advantage, then ASK** which models for which function. Reason over the live catalogue — match each sub-question to the model with the edge for it (reasoning depth vs. breadth vs. grounding). `model_selector.propose_fleet(candidate_model_ids, sub_questions, tier=...)` enriches your candidates with each model's risk card, the derived `gov_adjacent_safe` flag, the tier fleet-size, Sonar-split advice, and the blunt-critic benchmark pointers — it does **not** pick (the comparative-advantage reasoning is yours). **Mandatory floor: Gemini + OpenAI (GPT) + Grok + DeepSeek** (Grok is `optional_only` — never the default, always caveated). Add HuggingFace-hosted and other models per the use-case. The point is cross-vendor disagreement.
 4. **Fan out in parallel** via `fleet.run_fleet(...)` (or the `openrouter-multimodal` MCP for interactive one-offs).
-5. **Write each model's raw output** to disk *plus* a cross-model agreement/disagreement synthesis as you go. Disagreement is a verification target for Phase 3, not noise to average away.
+5. **Write each model's raw output** to disk *plus* a cross-model agreement/disagreement synthesis as you go. `run_fleet` streams + disk-captures each model to `<capture_dir>/<safe-model-id>.partial` as tokens arrive (pass `capture_dir=`), so a mid-stream break never loses partial output. Disagreement is a verification target for Phase 3, not noise to average away.
+6. **Honor `completion_status`.** Each result carries `completion_status ∈ {complete, known-incomplete, deterministic-fail, unavailable}`; `ok` is `True` only when it is `complete`. Treat anything else as the **known-incomplete honesty flag** — surface it to the user, and never silently use a truncated / failed stream as if it were whole. (Same rule the audit ledger enforces: a known-incomplete stream is never promoted to `confirmed`.)
+7. **Record every outbound query in the audit ledger** (append-only). `audit.ledger_record_from_fleet(timestamp=…, loop_id=…, query_id=…, sub_question=…, redaction_applied=True, fleet_result=r)` → `audit.append_ledger(ledger_path, rec)` — one JSONL row per query; `model` / `capture_path` / `completion_status` / `cost` pull through the fleet result. Log any question or idea **the instant it arises** with `audit.append_question(...)`. As Phase 3/4 resolve a query, append a NEW row with the updated `validation_verdict` (never edit a prior row; a known-incomplete stream is never moved to `confirmed`). See §"How it invokes the scripts".
 
 **Bake in the hard-won fleet quirks (these are rules, not tips):**
 
@@ -80,6 +82,7 @@ The signature phase. Fan each sub-question across a live, multi-vendor fleet so 
 | Model ids drift; aliases 400 | Resolve exact ids at fire time against the live catalogue, and **report every substitution** to the user (the result dict's `model` field is the id actually used). |
 | `perplexity_reason` times out on deep prompts | Use `perplexity_search` / `perplexity_ask` for fleet-adjacent web grounding, NOT `perplexity_reason`. (See sonar-router for the full matrix.) |
 | A single model failing | Never kills the fleet. `run_fleet` captures per-model errors into that model's result (`ok: False`, `error: "..."`); the others still return. |
+| A truncated / never-stopped stream | `run_fleet` trusts a generation complete **only** on an explicit stop reason; `length`/no-stop → `known-incomplete`, re-run within `max_attempts`, then surfaced as-is — never silently promoted to complete. A deterministic 4xx fails fast (no wasted reruns). |
 
 **Gate:** user approves the chosen fleet and the spend before the fan-out fires.
 
@@ -120,14 +123,23 @@ Produce the standardized output doc(s). When the question calls for prioritizati
 ### Phase 6 — CAPTURE  →  *gate: user approves what's written to memory*
 
 1. **Append high-signal source domains** discovered this run via `novelty_log.append_good_sources([...])` so the next run is seeded. AND **always also hunt NEW sources this run** (arXiv-recent, GitHub-trending, niche feeds, primary docs) — never just reuse the list. See §"Novelty / good-sources".
-2. **Leaf-only memory capture.** Add a per-project pointer + register the synthesis as a research-resync stream. **No global hub** — per Allen's leaf-only invariant, projects point DOWN at their own docs, never UP at a shared audit folder. See §"Capture / hand-off".
+2. **Leaf-only memory capture.** Add a per-project pointer + register the synthesis as a research-resync stream. **No global hub** — per the leaf-only invariant, projects point DOWN at their own docs, never UP at a shared audit folder. See §"Capture / hand-off".
 3. **Hand off to research-resync** so the synthesis stays fresh on a cadence.
+4. **Close the audit cycle.** Regenerate the human ledger view — `audit.render_ledger_markdown(audit.read_ledger(ledger_path))` — and emit `audit.generate_resurface(records, questions, timestamp=…)`: the 3 end-of-cycle buckets — *apply the validated findings now* · *new research paths to pursue* · *unresolved / uncertain*. Bucket 2's "which paths to pursue" is a STOP-AND-ASK gate, never auto-pursued.
 
-**Gate:** user approves the memory writes and the research-resync registration.
+**Gate:** user approves the memory writes, the research-resync registration, and the resurface buckets.
 
 ## The anti-hallucination spine
 
 This is summarized inline above (Phase 3, R-1..R-5) and spelled out in full — with the F1 case study (the receipts) and the TRIPWIRE — in **`references/anti-hallucination.md`**. Read it. The one-line version: **the fleet is an idea generator, not a fact source; nothing it names reaches the user as fact until a primary source confirms it.**
+
+## The north star (governing personality)
+
+labcoat runs on one ethos at **every** stage, from invocation to the last documented finding: **intense curiosity** (dig deeper, dream bigger — if a deeper dive has even a *tiny* chance of uncovering something novel, pursue it), **obsessive skepticism toward validated truth** (nothing is fact until a primary source confirms it), and **religious devotion to dreaming bigger** (take validated truth to its conclusion — what can it *do*?). Full rationale + the per-phase hooks: **`references/north-star.md`**; the machine form is `scripts/north_star.py`.
+
+**The honesty stake (hard rule):** ambition is *unbounded* in the engine; *claims* are bounded by verification. Curiosity drives the search; skepticism gates the claims. This is the same spine as the anti-hallucination rules — overclaiming is forbidden; trustworthiness is the moat.
+
+**Enforced-lite per-phase hooks:** at each gate, *before* proposing to the user, emit the 1–2 line reflection for that phase — `north_star.reflection_for_phase(n)` (n = 0..6) — in the spirit of the pillar that phase serves (curiosity for scope / harvest / divergence; skepticism for verify / validate; dreaming-bigger for synthesize / capture).
 
 ## The fleet — how to pick it
 
@@ -135,6 +147,9 @@ This is summarized inline above (Phase 3, R-1..R-5) and spelled out in full — 
 2. **Recommend a set**, then **ASK the user** which models for which function (some questions want a big reasoning model; some want breadth across cheap models).
 3. **Mandatory floor: Gemini + OpenAI (GPT) + Grok + DeepSeek.** HuggingFace-hosted + others per use-case. Cross-vendor coverage is the point.
 4. **Honor the quirks table** in Phase 2: `max_tokens >= 8000` for reasoning models; `google/gemini-2.5-pro` not `~google/gemini-pro-latest`; `perplexity_search`/`perplexity_ask` not `perplexity_reason`; resolve exact ids at fire time and report substitutions.
+5. **Safety-screen the fleet** with `model_selector.propose_fleet` → each candidate's risk card + the derived `gov_adjacent_safe` flag (jurisdiction + export-control status from `references/model-risk-cards.md`; the four PRC-hosted providers are gov-adjacent-**FALSE** for hosted use, flipping only on self-hosted open weights). Surface any government-adjacent-unsafe pick before firing.
+6. **Sonar-Pro split → offer the upgrade.** When the question splits into more distinct subjects than one deep query handles well (`model_selector.needs_sonar_split`), recommend either many Sonar-Pro queries **or ask the user to upgrade to Sonar Deep Research** — name the tradeoff (cost vs. depth) and let them choose.
+7. **Pick the blunt critic empirically.** The Phase-4 blunt critic is chosen at selection time by an **A/B flawed-claim critique eval** (inject known methodological flaws; measure each candidate's recall) — NOT hardcoded. Sycophancy/critique benchmarks (`propose_fleet` returns the pointers) are a *prior*, not the answer.
 
 Two execution paths — present both:
 
@@ -145,16 +160,19 @@ Two execution paths — present both:
 
 ## The redaction gate
 
-A two-layer, fail-closed gate. **Both layers run; neither alone is sufficient.**
+A two-layer, fail-closed, **two-class** gate. **Both layers run; neither alone is sufficient.**
 
-1. **Programmatic (necessary):** run `redaction_gate.assert_clean(prompt)` on **every** outbound prompt *before it leaves the machine*. It raises `SensitiveDataError` (fail-CLOSED) if it finds a secret shape (API-key shapes, PEM keys, AWS ids), an absolute user path, a `.secrets` reference, or an email. The error lists **labels + count only — never the matched value** (and `scan_for_sensitive` returns OFFSETS, never the secret), so logging a finding cannot leak a secret. Non-str input raises `TypeError` (fail-closed — you must pass the assembled string).
-2. **Human (sufficient-completing):** *ask the user* what to redact, then 3×-verify the assembled prompt by eye. The regex gate catches shapes; the human catches *context* (a client name, a matter reference, a sensitive topic) that no regex knows about.
+1. **Programmatic (necessary):** run `redaction_gate.redact(prompt, client_terms=[...])` on **every** outbound prompt *before it leaves the machine*. It splits findings into two classes:
+   - **Class A — true secrets** (API-key shapes, PEM keys, AWS ids, `.secrets` references): `hard_block=True`, `clean_text=None`. **HALT** — nothing leaves; rotate if it was a live secret.
+   - **Class B — contextual** (absolute user paths, emails, caller-supplied `client_terms`, optional Presidio NER PII): **surgically replaced** with typed, indexed placeholders (`<PATH_1>`, `<EMAIL_1>`, `<CLIENT_1>`) so the query stays useful — redact-and-continue, not block.
+   A post-redaction **`signal`** then sets `recommend_stop` when the surgical redaction guts the query — `(>15% of non-ws chars redacted AND ≥3 Class-B entities) OR <10 non-ws chars left`; on that flag, **pause and ask the user** before sending. Findings carry **offsets only — never the matched value** (so logging a finding cannot leak a secret); non-str input raises `TypeError` (fail-closed). `redaction_gate.assert_clean(prompt)` remains a fast **Class-A-only** wrapper (raises `SensitiveDataError`) for hot paths.
+2. **Human (sufficient-completing):** *ask the user* what to redact, then 3×-verify the assembled prompt by eye. The regex/NER gate catches shapes; the human catches *context* (a client name, a matter reference, a sensitive topic) that no detector knows about.
 
-**Known v1 limitation (documented, fail-SAFE):** the email pattern also matches `git@host`-style SSH URLs (e.g. `git@github.com:...`). This is a *false positive that blocks, never one that leaks* — the gate fails closed, the human confirms it's just an SSH URL, and proceeds. Erring toward blocking is the correct direction for a secret gate.
+**`git@host` SSH URLs — fixed in v2.** The email detector now allowlists `git@host`-style SSH URLs (e.g. `git@github.com:...`) via an SSH-URL exclusion, so they no longer false-positive. The gate still fails *closed* on anything genuinely ambiguous — erring toward blocking is the correct direction for a secret gate.
 
 ## The scope dial
 
-Recommend a tier, show the cost estimate, get confirmation. **Honor the R8 gate: any paid batch > USD 25 needs explicit Allen confirmation.** Exhaustive *always* requires a literal "yes, burn it".
+Recommend a tier, show the cost estimate, get confirmation. **Honor the R8 gate: any paid batch > USD 25 needs explicit operator confirmation.** Exhaustive *always* requires a literal "yes, burn it".
 
 | Tier | Models | Rounds | Agents | Cost est. | Use |
 |---|---|---|---|---|---|
@@ -165,13 +183,26 @@ Recommend a tier, show the cost estimate, get confirmation. **Honor the R8 gate:
 
 The cost estimate is exactly that — an estimate. `run_fleet` returns a `cost_est` per model computed from per-million-token prices you supply (`in_price`/`out_price` on each model spec); sum them for the run total. Show the projected number *before* firing, and the actual after.
 
+**Live tracking + the per-loop tolerance gate.** `spend.Tracker` accumulates ACTUAL spend (both lines) for a running health ticker; before each loop of a multi-round / Nuclear run, `spend.would_next_loop_breach(spent_so_far, next_loop_est, tolerance)` checks whether the next loop would cross the ceiling. If it would, **STOP that loop (not the session)** and surface the over-tolerance option menu — let the user choose:
+
+1. **Raise** the tolerance (set a new explicit ceiling).
+2. **Reduce variants** — fewer models / a smaller fan-out next loop.
+3. **Cheap wrap-up** — synthesize what's validated so far, no new spend.
+4. **Free validate-and-save** — run only the no-cost validation + capture, then stop.
+5. **Other** — the user directs.
+
 ## Standardization & write-as-you-go
 
 Every run writes to a gitignored, standardized workspace so output is recognizable across projects and a crash never loses work:
 
 ```
 <project>/<TopicName>/_internal/        # gitignored
-  audit/        # Phase 1 harvest + Phase 2 raw model outputs (one file per stream)
+  audit/
+    SESSION-LEDGER.jsonl     # canonical append-only audit ledger — one row per outbound query (Phase 2)
+    QUESTIONS-IDEAS.md       # append-only questions/ideas log (any phase, the instant they arise)
+    RESURFACE.md             # end-of-cycle 3-bucket resurface (Phase 6)
+    <safe-model-id>.partial  # Phase 2 streamed model captures (the ledger's raw substrate)
+    ...                      # Phase 1 harvest + per-stream raw outputs
   research/     # cross-model synthesis, working notes
   decisions.md  # running decisions for this investigation
 ```
@@ -194,6 +225,23 @@ Mirror the proven layout. The five standardized output shapes live in `reference
 - **Leaf-only memory:** add a per-project memory pointer to the synthesis doc; do NOT create or point at a global audit hub (the leaf-only invariant — projects point DOWN, never UP).
 - **research-resync hand-off:** register the Phase 5 synthesis as a research-resync *stream* (per-project YAML under `~/.claude/research/<project>/`) so it gets re-run on a cadence and decay is detected. This is the composition seam: labcoat does the rigorous first pass, research-resync maintains it.
 
+## Durable autonomy (Tier 2 — opt-in)
+
+The interactive pipeline above stops and asks at every gate. The **Tier-2 durable orchestrator** is the opt-in *autonomous* mode: it drives multi-loop runs of the 6-phase pipeline unattended, **survives a host reboot**, and resumes mid-run. Operator spec + bring-up smoke checklist: **`references/orchestrator-host.md`**; the pure decision core is `scripts/orchestrator.py` + `scripts/pacing.py` + the `spend.Tracker` reservation.
+
+- **Resume:** on restart, `orchestrator.plan_resume(audit.read_ledger(path))` replays only the not-yet-`complete` queries (skip `complete`, re-drive `known-incomplete` / `unavailable`, never `deterministic-fail`). The append-only ledger IS the checkpoint store.
+- **Guarantee = at-least-once + idempotency** (the upstream gateway has no request dedup). Cost backstop = **pessimistic spend reservation**: `Tracker.reserve(est)` before the call (with `audit.append_ledger(intent, fsync=True)`), released only on a confirmed result — the in-memory reservation prevents live (within-process) over-spend; the REBOOT-durable backstop is the fsync'd `known-incomplete` intent record on disk, which resume re-drives (at-least-once).
+- **Pacing:** `pacing.pacing_decision(signals)` → proceed / graceful-pause (429 / low `anthropic-ratelimit-*`) / hard-stop (Anthropic monthly cap / OpenRouter 402); `pacing.ramp_after_idle` ramps traffic up gradually after a pause.
+- **Per-loop gate:** `orchestrator.loop_decision` composes pacing + the spend-tolerance breach → continue / pause / stop, surfacing the over-tolerance OPTION MENU (the §"The scope dial" menu).
+- **Novelty / saturation gate (CALIBRATED + ENFORCING by default):** `novelty_gate.cny(...)` measures *Confirmed-Novelty Yield* — new confirmed findings per loop, filtered by a two-stage dedup + distance — computed **ONLY over `validation_verdict=='confirmed'` records**, so a loop emitting varied-but-*fabricated* findings scores 0 (the audit-v2 honesty invariant doubles as the anti-gaming property). `novelty_gate.yield_collapse(...)` (an SPC K-consecutive-low run-rule) flags yield-collapse; on collapse `loop_decision` **pauses-and-pings the human — it never auto-stops** (corrigible). **Calibrated 2026-06-23** on 3 diverse multi-loop curves (sharp / steady-productive / bursty): **`tau=0.30` / `floor=0` / `window=3`** classify all three with zero false positives/negatives, so the gate now **ENFORCES by default** (`--novelty-enforcing`; `--no-novelty-enforcing` restores WARN-only). It is a *saturation* signal ("still finding new validated things?"), NOT a value-aware fitness function (the Tier-3 value axis below stays ADVISORY — the Goodhart-hard problem).
+- **Host:** Agent SDK (Python) under a Windows Service / Task Scheduler `ONSTART /ru System`, `ANTHROPIC_API_KEY` from the service env (never `CLAUDE_CODE_OAUTH_TOKEN`; never Desktop/cloud). TOLERANCE stays a hard ceiling.
+- **§5.2 Nuclear engine (`scripts/nuclear.py`):** the autonomous *multi-loop* mode. An async Agent-SDK brain (`claude_agent_sdk.query`) drives, per loop: **decompose** (the FIRST loop decomposes the original question; each LATER loop re-decomposes FROM the prior loop's ranked gaps — the loop-evolution engine, so the engine chases the next question instead of re-asking) → **fleet fan-out** via `orchestrator_host.run_loop` (the durable record-before-call `fsync` + reservation; `query_id` is run-/loop-scoped so evolved loops fan out cleanly) → **hard-skeptic primary-source verify** (the brain with `WebSearch`/`WebFetch`) which writes each *confirmed* finding's `claim_text` into the ledger → **gap-evolution** (`nuclear_core.gap_prompt` → `loop_evolution.parse_gaps`/`rank_gaps`/`select_evolved_questions`: surface gaps + contradictions, rank contradictions first, filter, seed the next loop's decompose) → **novelty** (`novelty_gate.cny` over confirmed-only + `novelty_store` seen-set/corpus/CNY-history persistence + `yield_collapse`, now CALIBRATED + ENFORCING) → **pacing** (the live `RateLimitEvent` / `ResultMessage.api_error` → `pacing.rate_limit_signals` + `spend.quota_signals` → `pacing.pacing_decision`) → **per-loop decision** (`compose_loop_state` → `loop_decision` → the option menu / pause-and-ping) → **synthesize** over the confirmed corpus on stop. Operator subcommands: `estimate` (FREE — two-line estimate, no paid call) and `run --tolerance <usd>` (PAID, tiny by default). Layered money gates: the two-line estimate shown first, TOLERANCE as the hard ceiling, the **R8 burn gate** (`spend.requires_explicit_burn` → estimate over the threshold needs `--confirm "yes, burn it"`), and `ClaudeAgentOptions.max_budget_usd` per brain call. Keys load in-process from `~/.secrets/*.env`, never printed.
+- **Tier-3 — value-aware novelty + memory + degeneracy (ADVISORY):** the `cny` count axis is the *diversity* signal; Tier-3 adds the **quality** axis it omits. `value_axis.py` weights a confirmed finding by the number of **independent primary sources** that confirmed it (`source_count` → capped `quality_weight`), reports a quality-weighted yield (`weighted_cny`), keeps a MAP-Elites-lite **best-per-cell archive** (`qd_archive_update`), and runs the **degeneracy detector** (`weighted_yield_collapse` — the *same* SPC rule on the weighted scalar) plus `cost_per_verified_finding`. Persistence is the pluggable **`MemoryBackend` seam** (`memory_backend.py`): a stdlib-SQLite append-only **bi-temporal + provenance** backend (the §6.3 default; `--backend sqlite`) or a zero-dependency flat-file backend (`--backend file`) — drop-in interchangeable. **Every value-aware signal is ADVISORY: reported each loop, never consumed by `loop_decision`**, until calibrated on a recorded run (the value axis is the honestly-unsolved Goodhart-hard problem — the weight is capped, computed only over `confirmed`, and pairs with the detector as defense-in-depth, none Goodhart-proof).
+
+- **North-Star capabilities (2026-06-23):** **loop-evolution** (`loop_evolution.py` + `run_scope.py`) — **WIRED-LIVE**: each loop after the first re-decomposes from the prior loop's ranked gaps (contradictions first), so the engine *chases* the next question instead of re-asking; plus the run-scoped ledger fix so a shared workspace no longer collides across questions. **N1 literature-grounded novelty** (`n1_novelty.py` — RND-style relative-neighbor-density vs an external corpus + an injected-index adapter + a mandatory date-cutoff), **N3 combinatorial / analogical synthesis** (`combinatorial.py` — a MAP-Elites archive over `(domainA,domainB,mechanism)` + multiplicative `creativity = novelty × utility` + a proposer⊥judge separation), and **N2 gap / whitespace channels** (`gap_channels.py` — Swanson-ABC + future-work + contradiction → reconciliation) are **PURE, unit-tested, ADVISORY cores with DEFERRED live adapters** (the citation-aware embedder + ANN index, the live combinatorial generate-judge-ground loop, and the concept-graph extraction are not yet wired). They score/archive *injected* data today; they do **not** yet run end-to-end live.
+
+⚠ Built + how it's validated: `orchestrator_host.py` + **§5.2 Nuclear (`scripts/nuclear.py`)** are built and live-validated; the **loop-evolution engine is WIRED-LIVE** and the **saturation gate is CALIBRATED + ENFORCING** (2026-06-23, 3-curve calibration — see the gate bullet above). The **N1 / N3 / N2 cores are built + unit-tested but ADVISORY with deferred live adapters**, and the **Tier-3 value-axis + `MemoryBackend` + degeneracy detector stay ADVISORY** (the value axis is the honestly-unsolved Goodhart-hard problem). The pure core throughout (`nuclear_core`, `loop_evolution`, `n1_novelty`, `combinatorial`, `gap_channels`, `novelty_store`, `value_axis`, `memory_backend`, `spend`, `pacing`, `run_scope`) is unit-tested (**332 tests**); the live async `run` path is operator-gated + smoke-validated (estimate-first). Still open: the deferred live adapters above, and a broader multi-run calibration before the value axis could ever move from advisory to enforcing.
+
 ## How it invokes the scripts
 
 All scripts live in `scripts/` and are libraries (no CLI on `fleet.py`/`redaction_gate.py`/`novelty_log.py`; `route_integration.py` shells the sonar-router CLI internally). Invoke them from a short `python` snippet with `OPENROUTER_API_KEY` in the env (never on the command line, never hardcoded, never logged).
@@ -204,14 +252,21 @@ import sys, pathlib
 sys.path.insert(0, str(pathlib.Path("scripts").resolve()))
 import route_integration
 verdict = route_integration.route_query("does repo trailofbits/skills exist and what is its license")
-# -> {"recommended_tool": ..., "fallback": ..., "score": {...}, "rationale": ..., "schema_version": 2}
+# -> {"recommended_tool": ..., "fallback": ..., "score": {...}, "rationale": ...}  (exact shape depends on the installed sonar-router version)
 #    or a safe default {"recommended_tool": "perplexity_ask", ..., "degraded": True} if the router can't run
 ```
 
-**Redaction gate (before EVERY outbound prompt):**
+**Redaction gate (before EVERY outbound prompt) — v2 two-class:**
 ```python
 import redaction_gate
-redaction_gate.assert_clean(prompt)   # raises SensitiveDataError (labels+count only) if anything is flagged
+r = redaction_gate.redact(prompt, client_terms=["AcmeCorp"])   # offsets only — never echoes a matched value
+if r["hard_block"]:                       # Class-A secret detected -> HALT + rotate; nothing leaves (signal is None here)
+    raise SystemExit("secret in outbound prompt: " + str([f["label"] for f in r["findings"]]))
+# past the hard_block guard, signal is always present (never check it before the hard_block guard):
+if r["signal"]["recommend_stop"]:         # surgical redaction gutted the query -> pause + ask the user
+    ...                                   # confirm (or re-scope) before sending
+outbound = r["clean_text"]                # Class-B spans -> typed placeholders <PATH_1> / <EMAIL_1> / <CLIENT_1>
+# redaction_gate.assert_clean(prompt) remains a fast Class-A-only wrapper for hot paths
 ```
 
 **Fan out across the fleet (Phase 2)** — `OPENROUTER_API_KEY` must be set in the env first:
@@ -224,8 +279,11 @@ models = [
     {"id": "x-ai/grok-4",           "reasoning": False, "in_price": 3.0,  "out_price": 15.0},
     {"id": "deepseek/deepseek-chat","reasoning": True,  "in_price": 0.27, "out_price": 1.10, "max_tokens": 8000},
 ]
-results = fleet.run_fleet("<sub-question prompt>", models, available=available, temperature=0.4, parallel=True)
-# each result has the SAME 7 keys: {model, ok, text, in_tokens, out_tokens, cost_est, error}
+results = fleet.run_fleet("<sub-question prompt>", models, available=available, temperature=0.4,
+                          parallel=True, capture_dir="_internal/audit/captures")  # stream -> disk per model
+# each result carries: {model, ok, text, in_tokens, out_tokens, cost_est, error,
+#   completion_status, rerun_count, capture_path}; ok is True ONLY when completion_status == "complete"
+# treat completion_status != "complete" as the known-incomplete honesty flag (surface, never silently use)
 # per-model failures are captured (ok=False, error set); the API key never appears in any result
 run_cost = sum(r["cost_est"] for r in results)
 ```
@@ -237,6 +295,20 @@ import novelty_log
 novelty_log.append_good_sources(["distill.pub", "lwn.net"])   # case-insensitive dedup against references/good-sources.md
 seeds = novelty_log.read_good_sources()                        # seed next run's Phase 2/3
 ```
+
+**Audit trail (Phase 2 ledger + Phase 6 resurface):**
+```python
+import audit
+rec = audit.ledger_record_from_fleet(timestamp=ts, loop_id="L1", query_id="q1",
+        sub_question="is X novel?", redaction_applied=True, fleet_result=r)   # r from run_fleet
+audit.append_ledger(ledger_path, rec)                                          # append-only JSONL (fsync=True for durable runs)
+audit.append_question(questions_path, timestamp=ts, text="try MAP-Elites", kind="idea")  # the instant it arises
+# end of cycle:
+md = audit.render_ledger_markdown(audit.read_ledger(ledger_path))             # human Markdown view
+resurface = audit.generate_resurface(audit.read_ledger(ledger_path),
+                                     audit.read_questions(questions_path), timestamp=ts)  # 3 buckets
+```
+(All timestamps are passed IN as ISO-8601 strings — `audit` never calls `datetime.now()`.)
 
 ## Sub-skills it leans on
 
@@ -250,17 +322,19 @@ seeds = novelty_log.read_good_sources()                        # seed next run's
 - **Not a one-shot report** — that's deep-research. labcoat is multi-round and gated.
 - **Not a doc-refresher** — that's research-resync. labcoat does the rigorous *first* pass and feeds research-resync.
 - **Not a fact source** — the fleet generates ideas; only Phase 3 primary-source checks produce facts.
-- **Not autonomous** — every phase stops and asks. It never auto-fans-out, auto-spends, or auto-writes-to-memory.
+- **Not autonomous by default** — the interactive pipeline stops and asks at every gate; it never auto-fans-out, auto-spends, or auto-writes-to-memory. (The opt-in **Tier-2 durable orchestrator** IS the autonomous mode — see §"Durable autonomy" — and even it keeps TOLERANCE a hard ceiling + the per-loop option menu.)
 - **Not a hardcoded model list** — it checks OpenRouter live and asks which models to use each run.
 
 ## Cross-references
 
 - Anti-hallucination rules + F1 case study: `references/anti-hallucination.md`
+- North star (governing personality) + honesty stake: `references/north-star.md`
+- Durable orchestrator host (Tier-2 shell spec + bring-up smoke checklist): `references/orchestrator-host.md`
+- Model provider risk cards (gov-adjacent-safe inputs): `references/model-risk-cards.md`
 - Output templates: `references/output-templates/{decomposition,research-stream,verification-ledger,validation-record,ranked-synthesis}.md`
 - Seed source list: `references/good-sources.md`
-- The fleet runner + gate + novelty log + router wrapper: `scripts/{fleet,redaction_gate,novelty_log,route_integration}.py`
+- Scripts (23): `scripts/{fleet,redaction_gate,novelty_log,route_integration,model_selector,spend,audit,north_star,orchestrator,orchestrator_host,pacing,novelty_gate,novelty_store,nuclear_core,nuclear,value_axis,memory_backend,smoke_host,loop_evolution,run_scope,n1_novelty,combinatorial,gap_channels}.py` — fleet runner · redaction v2 gate · novelty log · sonar-router wrapper · model-selection · spend/tolerance/quota + R8 burn gate · audit-trail · north-star ethos · durable-orchestrator decision core · durable host (fleet loop driver) · pacing/quota · novelty/saturation gate (calibrated + enforcing) · novelty seen-set/corpus persistence · Nuclear pure core (parsers/decision/prompt builders) · §5.2 Nuclear async multi-loop engine (operator entrypoint) · Tier-3 value-axis (advisory quality + degeneracy detector) · pluggable MemoryBackend (SQLite bi-temporal+provenance / file) · host live-smoke · **loop-evolution next-question generator (WIRED-LIVE)** · **run-scoped ids (C1 fix)** · **N1 literature-grounded novelty (RND scorer + injected-index adapter; ADVISORY/deferred adapter)** · **N3 combinatorial synthesis (MAP-Elites + multiplicative creativity + proposer⊥judge; ADVISORY/deferred adapter)** · **N2 gap/whitespace channels (ABC + future-work + contradiction → reconciliation; ADVISORY/deferred adapter)**.
 - Tests: `tests/` (run `python -m pytest tests/ -q` from the skill root)
-- v2 remote-MCP plan (future): `docs/MCP-V2-PLAN.md`
 - Companion skill (per-query routing): [`sonar-router`](https://github.com/Polycentric-Labs/sonar-router)
 
 ## Validation
