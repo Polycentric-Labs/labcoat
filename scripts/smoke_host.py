@@ -1,7 +1,9 @@
 # scripts/smoke_host.py
 """Operator LIVE-SMOKE for the durable host — NOT unit-tested; the `run` subcommand spends a few CENTS.
 
-Loads OPENROUTER_API_KEY in-process from ~/.secrets/openrouter.env (NEVER printed), then:
+Reads OPENROUTER_API_KEY from the environment (the primary path), falling back to an OPTIONAL convenience file
+$LABCOAT_SECRETS_DIR/openrouter.env (default ~/.secrets/openrouter.env) — loaded in-process, NEVER printed,
+source path announced. Then:
   estimate : FREE — fetch the live catalogue (validates network egress + the key), pick the cheapest available
              model, and print the projected cost of the tiny smoke run. No paid call.
   run      : fire ONE tiny loop (1 trivial sub-question, 1 cheap model, max_tokens=256) through the REAL fleet,
@@ -37,13 +39,10 @@ _IN_TOK_EST = 80
 
 
 def _load_key() -> None:
-    p = pathlib.Path.home() / ".secrets" / "openrouter.env"
-    for line in p.read_text(encoding="utf-8").splitlines():
-        s = line.strip()
-        if s.startswith("OPENROUTER_API_KEY="):
-            os.environ["OPENROUTER_API_KEY"] = s.split("=", 1)[1].strip().strip('"').strip("'")
-            return
-    raise SystemExit("OPENROUTER_API_KEY= line not found in ~/.secrets/openrouter.env")
+    """Env var first (the primary, documented path); optional convenience file second. Never prints the value;
+    always announces the source path. Delegates to nuclear._load_env_key — one loader, one policy."""
+    import nuclear
+    nuclear._load_env_key("OPENROUTER_API_KEY", "openrouter.env")
 
 
 def _pick_model():

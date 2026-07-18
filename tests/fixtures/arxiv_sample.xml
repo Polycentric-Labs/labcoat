@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">
+  <opensearch:totalResults xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">2</opensearch:totalResults>
+  <entry>
+    <id>http://arxiv.org/abs/2503.01508v2</id>
+    <updated>2025-03-15T10:00:00Z</updated>
+    <published>2025-03-03T12:30:00Z</published>
+    <title>Enabling AI Scientists to Recognize
+      Innovation</title>
+    <summary>  We propose a domain-agnostic algorithm
+      for assessing novelty.  </summary>
+    <author><name>Yao Wang</name></author>
+    <arxiv:primary_category xmlns:arxiv="http://arxiv.org/schemas/atom" term="cs.DL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.DL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2204.06507v1</id>
+    <updated>2022-04-13T00:00:00Z</updated>
+    <published>2022-04-13T00:00:00Z</published>
+    <title>Out-of-Distribution Detection with Deep Nearest Neighbors</title>
+    <summary>A non-parametric nearest-neighbor distance for OOD detection.</summary>
+    <author><name>Yiyou Sun</name></author>
+    <arxiv:primary_category xmlns:arxiv="http://arxiv.org/schemas/atom" term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+</feed>

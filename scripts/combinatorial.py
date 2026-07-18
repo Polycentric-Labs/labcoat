@@ -237,6 +237,72 @@ def run_round(combinations, *, novelty_fn, utility_fn, archive=None, bins: int =
             "zero_value": zero_value, "report": archive_report(arch, bins=bins)}
 
 
+def parse_judge(obj) -> dict:
+    """Normalize a retrieval-grounded JUDGE response into {nearest_prior_work, plausibility, utility, rationale}.
+    Tolerant of JSON-string / fenced / enveloped input (reuses _extract_json). plausibility/utility clamped to
+    [0,1]; missing/invalid numerics -> 0.0; missing strings -> ''. The utility_fn signal source."""
+    data = _extract_json(obj) if isinstance(obj, str) else obj
+    if not isinstance(data, dict):
+        return {"nearest_prior_work": "", "plausibility": 0.0, "utility": 0.0, "rationale": ""}
+
+    def _f(key):
+        try:
+            return min(1.0, max(0.0, float(data.get(key))))
+        except (TypeError, ValueError):
+            return 0.0
+
+    return {"nearest_prior_work": str(data.get("nearest_prior_work") or ""),
+            "plausibility": _f("plausibility"), "utility": _f("utility"),
+            "rationale": str(data.get("rationale") or "")}
+
+
+def aggregate_utility(judge_dicts) -> float:
+    """Combine multiple judges' verdicts into ONE utility in [0,1] = mean over judges of (plausibility * utility).
+    Multiplicative per judge (incoherent OR useless -> ~0); averaged across the disjoint judge pool. Empty -> 0.0.
+    Each item may be a parse_judge dict OR a raw judge response (str/dict) -> parsed via parse_judge."""
+    ds = list(judge_dicts or [])
+    if not ds:
+        return 0.0
+    total = 0.0
+    for d in ds:
+        j = d if (isinstance(d, dict) and "plausibility" in d and "utility" in d) else parse_judge(d)
+        p = min(1.0, max(0.0, float(j.get("plausibility", 0.0) or 0.0)))
+        u = min(1.0, max(0.0, float(j.get("utility", 0.0) or 0.0)))
+        total += p * u
+    return min(1.0, max(0.0, total / len(ds)))
+
+
+def ground_prompt(combination) -> str:
+    """Pure builder: the hard-skeptic WEB-GROUNDING pass on an ELITE combination. The brain (with web access)
+    verifies the cross-domain CLAIM against PRIMARY sources and decides whether it SURVIVES — coherent, NOT
+    already trivially well-known as stated, and NOT refuted. Skeptical by default (grounded=false on doubt):
+    post-grounding survival is the only 'real' signal (2506.20803)."""
+    c = combination or {}
+    claim = str(c.get("claim") or "")
+    mech = str(c.get("mechanism") or "")
+    return (
+        "You are a HARD-SKEPTIC grounding verifier with web access. Verify the following cross-domain CLAIM against "
+        "PRIMARY sources (search the literature/web). Decide if it SURVIVES: it is coherent, NOT already trivially "
+        "well-known/established as stated, and NOT refuted by existing evidence. Be skeptical: if you cannot "
+        "substantiate that it survives, mark grounded=false.\n\n"
+        f"CLAIM: {claim}\nMECHANISM: {mech}\n\n"
+        "Return STRICT JSON only: {\"grounded\": true|false, \"verdict\": "
+        "\"survives|already-known|refuted|incoherent\", \"evidence\": \"cite the primary source(s) consulted\"}. "
+        "No prose.")
+
+
+def parse_grounding(obj) -> dict:
+    """Tolerant parse of a ground_prompt response -> {grounded, verdict, evidence}. FAIL-CLOSED: grounded defaults
+    to False on any missing / ambiguous / parse failure (unverified != survived)."""
+    data = _extract_json(obj) if isinstance(obj, str) else obj
+    if not isinstance(data, dict):
+        return {"grounded": False, "verdict": "", "evidence": ""}
+    g = data.get("grounded")
+    grounded = (g is True) or (isinstance(g, str) and g.strip().lower() in ("true", "yes", "survives"))
+    return {"grounded": bool(grounded), "verdict": str(data.get("verdict") or ""),
+            "evidence": str(data.get("evidence") or "")}
+
+
 def archive_report(archive, *, bins: int = 16, grounded_survivors=None) -> dict:
     """The HONEST N3 report. coverage + qd_score (EXPLICITLY labeled an upper bound on diversity+surface-
     plausibility, never a discovery count) + n_elites + post_grounding_survival_rate (the survivors that passed

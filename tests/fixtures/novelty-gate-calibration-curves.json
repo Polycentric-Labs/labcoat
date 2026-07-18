@@ -1,0 +1,38 @@
+{
+  "_comment": "The three diverse multi-loop CNY curves the ENFORCING saturation-gate default (tau=0.30 / floor=0 / window=3) was calibrated on (2026-06-23). README.md and SKILL.md cite this calibration as the warrant for the gate enforcing by default; tests/test_novelty_gate.py::test_calibration_* re-derives that warrant from this file, so the claim is checkable from a clone with no network and no credential. Each curve is per-loop Confirmed-Novelty Yield (confirmed findings only) from a real 6-loop run.",
+  "calibrated_on": "2026-06-23",
+  "adopted_params": {"tau": 0.30, "floor": 0, "window": 3},
+  "rejected_params": [
+    {
+      "params": {"tau": 0.30, "floor": 0, "window": 2},
+      "why": "false-fires in the [0,0] valley of the bursty curve (exp3_ai_safety, loop 4) before the burst of 13 arrives — a false positive"
+    }
+  ],
+  "honest_limit": "tau is UNDER-DETERMINED by this calibration: these curves are tau-invariant (the Stage-1 seen-set dedup dominates the Stage-2 distance test), so tau=0.30 is held over from the prior default, not derived here. floor and window ARE derived.",
+  "curves": [
+    {
+      "id": "exp1_llm",
+      "shape": "sharp",
+      "cny_history": [25, 1, 0, 0, 0, 0],
+      "expected_collapse": true,
+      "expected_first_collapse_loop": 5,
+      "why": "genuinely saturated after loop 1 — the gate SHOULD fire (true positive), and not before loop 5"
+    },
+    {
+      "id": "exp2_crispr",
+      "shape": "steady-productive",
+      "cny_history": [0, 4, 1, 8, 0, 3],
+      "expected_collapse": false,
+      "expected_first_collapse_loop": null,
+      "why": "still producing confirmed findings throughout — the gate must NOT fire"
+    },
+    {
+      "id": "exp3_ai_safety",
+      "shape": "bursty",
+      "cny_history": [0, 19, 0, 0, 13, 0],
+      "expected_collapse": false,
+      "expected_first_collapse_loop": null,
+      "why": "quiet valleys between bursts are not saturation — the gate must NOT fire (this is the curve that rejects window=2)"
+    }
+  ]
+}

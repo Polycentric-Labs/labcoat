@@ -5,6 +5,16 @@ fitness function (that is the unsolved Tier-3 problem). Pure stdlib (hashlib, re
 contract). Novelty is computed ONLY over validation_verdict=='confirmed' records, so a degenerating loop emitting
 varied-but-fabricated findings scores 0 (reuses the audit-v2 honesty invariant as the core anti-gaming property).
 
+HONEST SCOPE OF "NOVELTY" HERE (do not overclaim): CNY's two-stage gate measures WITHIN-RUN DIVERSITY / DEDUPLICATION
+— Stage 1 (finding_key hash) catches EXACT repeats; Stage 2 (novelty_distance >= tau) is a WITHIN-RUN semantic
+NEAR-DUPLICATE filter (a paraphrase of a prior confirmed finding IN THIS RUN). It is NOT literature-grounded novelty:
+"is this new vs all published work?" is the SEPARATE N1 signal (n1_novelty.external_novelty / the off_distribution
+gate), which compares a claim to an EXTERNAL corpus. Calibration note (2026-06-26 dogfood, verify-to-kill): if Stage 2
+is ever upgraded from Jaccard to an embedding distance_fn, use a SENTENCE-TRANSFORMER tuned for short-text paraphrase
+(e.g. all-mpnet-base-v2 / SBERT — symmetric, STS-trained), NOT SPECTER2 (that is a claim-vs-PAPER/document model = N1's
+job, wrong for claim-vs-claim paraphrase); tau for the embedding regime is UNCALIBRATED (the embedding Stage-2 gate is
+deferred — Stage-1 hash + N1 cover the common cases; its value is conditional on paraphrase-dup prevalence).
+
 Scope (the scoping memo's hard conditions): WARN-only until calibrated; never silently auto-stops (the loop_decision
 branch pauses-and-pings only when explicitly enforcing); warm-up >= window. License: MIT. Author: Allen Byrd."""
 from __future__ import annotations
@@ -43,9 +53,12 @@ def jaccard_distance(a: str, b: str, *, k: int = 3) -> float:
 
 
 def novelty_distance(text: str, corpus: list[str], *, distance_fn=None) -> float:
-    """Distance to the NEAREST corpus entry (= 1 - max similarity). Empty corpus -> 1.0 (fully novel).
-    distance_fn(a, b) -> [0,1] distance; default = jaccard_distance (the stdlib public-core floor). An injected
-    distance_fn (e.g. 1 - SBERT cosine, pinned) is the optional paraphrase-robust upgrade."""
+    """WITHIN-RUN dedup distance to the NEAREST prior confirmed-finding text (= 1 - max similarity). Empty corpus ->
+    1.0 (nothing to dedup against). distance_fn(a, b) -> [0,1] distance; default = jaccard_distance (the stdlib
+    public-core floor). The optional paraphrase-robust upgrade is a PINNED SENTENCE-TRANSFORMER cosine
+    (1 - cos, e.g. all-mpnet-base-v2 / SBERT — symmetric, STS/paraphrase-trained); do NOT use SPECTER2 here (it is a
+    claim-vs-PAPER model for N1's literature-grounded novelty, not claim-vs-claim paraphrase). tau for the embedding
+    regime is uncalibrated — see the 2026-06-26 dogfood finding (embedding Stage-2 deferred)."""
     if not corpus:
         return 1.0
     df = distance_fn or jaccard_distance

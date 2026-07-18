@@ -1,0 +1,9 @@
+# polycentric-labcoat — DEV/TEST dependencies (needed to RUN the test suite, not to run labcoat).
+# Install alongside the core:  pip install -r requirements.txt -r requirements-dev.txt
+#
+# With these two files (and nothing from requirements-n1.txt) the suite is:
+#   577 tests -> 570 passed, 7 skipped, 0 failed
+# The 7 skips are the live-N1 adapter tests, guarded to skip rather than fail when faiss/torch are absent.
+# Installing requirements-n1.txt as well un-skips 5 of them (575 passed, 2 skipped).
+pytest>=9
+pytest-asyncio>=1.3   # tests/test_nuclear.py's two @pytest.mark.asyncio tests FAIL without it

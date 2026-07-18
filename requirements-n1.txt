@@ -1,0 +1,12 @@
+# polycentric-labcoat — OPTIONAL live-N1 adapter dependencies.
+# Needed ONLY for the live N1 adapter (scripts/n1_embedder.py, scripts/n1_index.py, scripts/smoke_n1_live.py).
+# The pure core (scripts/n1_novelty.py) + the rest of labcoat run WITHOUT these (zero-dep default).
+#
+# faiss-cpu ships win_amd64 wheels for CPython 3.11 and 3.12 (verified on PyPI: floor 1.12.0 and latest 1.14.3),
+# so `pip install -r requirements-n1.txt` needs no conda/build on Windows. If a wheel is ever unavailable:
+# fallback = conda-forge faiss-cpu, or chroma-hnswlib, or run the pure InMemoryN1Index path (no faiss).
+numpy
+faiss-cpu>=1.12
+torch
+transformers
+adapters

@@ -14,3 +14,7 @@ Thumbs.db
 .local/
 _internal/
 .planning/
+
+# Local venv for the optional live-N1 extras (never committed)
+.venv/
+venv/

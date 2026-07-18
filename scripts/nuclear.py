@@ -1,7 +1,9 @@
 # scripts/nuclear.py
 """Operator LIVE entrypoint for the §5.2 NUCLEAR autonomous multi-loop research engine — NOT unit-tested; the
 `run` subcommand spends REAL money (Claude-orchestration brain + OpenRouter fleet). Mirrors smoke_host.py:
-loads API keys in-process from ~/.secrets/*.env (NEVER printed), shows the two-line estimate FIRST, enforces
+reads API keys from the environment (OPENROUTER_API_KEY / ANTHROPIC_API_KEY — the primary path), falling back to
+an OPTIONAL convenience file under $LABCOAT_SECRETS_DIR (default ~/.secrets/*.env); the value is loaded
+in-process and NEVER printed, and the source path is announced. Shows the two-line estimate FIRST, enforces
 TOLERANCE (hard ceiling) + the R8 burn gate, and keeps runs tiny by default.
 
 Per loop the async Agent-SDK brain drives the proven 6-phase method:
@@ -78,18 +80,39 @@ def brain_spec(backend: str, model_override: str | None = None) -> dict:
 
 
 # ---------------------------------------------------------------------------- secret loaders (never printed)
+def secrets_dir() -> pathlib.Path:
+    """The optional secret-file directory: $LABCOAT_SECRETS_DIR, else ~/.secrets (one convenience convention,
+    NOT a requirement — the plain env var is the primary, documented path)."""
+    return pathlib.Path(os.environ.get("LABCOAT_SECRETS_DIR") or (pathlib.Path.home() / ".secrets"))
+
+
 def _load_env_key(var: str, filename: str) -> None:
-    """Load a single KEY=value line from ~/.secrets/<filename> into os.environ[var], in-process, never printed
-    (the secret-handling protocol: file -> env, no stdout, no context). No-op if already set in the env."""
+    """Ensure os.environ[var] is set. Order: (1) the env var itself — the primary, documented path; (2) an
+    OPTIONAL convenience file <secrets_dir>/<filename> (see secrets_dir()). The value is loaded in-process and
+    NEVER printed (the secret-handling protocol: file -> env, no stdout, no context) — but the SOURCE PATH is
+    announced, so a credential is never picked up implicitly from an undeclared location. Missing file or
+    missing line -> the same actionable message fleet._get_api_key() raises, naming the env var."""
     if os.environ.get(var):
         return
-    p = pathlib.Path.home() / ".secrets" / filename
-    for line in p.read_text(encoding="utf-8").splitlines():
+    p = secrets_dir() / filename
+    try:
+        text = p.read_text(encoding="utf-8")
+    except OSError:
+        raise SystemExit(
+            f"{var} not set (env/1Password only; never hardcode). Set it with `export {var}=...` "
+            f"(PowerShell: `$env:{var}='...'`), or place a `{var}=...` line in the optional file {p} "
+            f"(override that directory with LABCOAT_SECRETS_DIR)."
+        )
+    for line in text.splitlines():
         s = line.strip()
         if s.startswith(f"{var}="):
             os.environ[var] = s.split("=", 1)[1].strip().strip('"').strip("'")
+            print(f"[labcoat] loaded {var} from {p} (path only; the value is never printed)")
             return
-    raise SystemExit(f"{var}= line not found in ~/.secrets/{filename}")
+    raise SystemExit(
+        f"{var} not set (env/1Password only; never hardcode). The file {p} exists but carries no `{var}=` line — "
+        f"add one, or set the env var directly with `export {var}=...`."
+    )
 
 
 def _scrub(s):

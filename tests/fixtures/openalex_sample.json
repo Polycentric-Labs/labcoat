@@ -1,0 +1,1966 @@
+{
+ "results": [
+  {
+   "id": "https://openalex.org/W2939571759",
+   "title": "Weakly Supervised Adversarial Domain Adaptation for Semantic Segmentation in Urban Scenes",
+   "display_name": "Weakly Supervised Adversarial Domain Adaptation for Semantic Segmentation in Urban Scenes",
+   "abstract_inverted_index": {
+    "Semantic": [
+     0
+    ],
+    "segmentation,": [
+     1
+    ],
+    "a": [
+     2,
+     18,
+     53,
+     63,
+     77,
+     115
+    ],
+    "pixel-level": [
+     3,
+     116
+    ],
+    "vision": [
+     4
+    ],
+    "task,": [
+     5
+    ],
+    "is": [
+     6,
+     28,
+     155,
+     165
+    ],
+    "rapidly": [
+     7
+    ],
+    "developed": [
+     8
+    ],
+    "by": [
+     9
+    ],
+    "using": [
+     10
+    ],
+    "convolutional": [
+     11
+    ],
+    "neural": [
+     12,
+     99
+    ],
+    "networks": [
+     13
+    ],
+    "(CNNs).": [
+     14
+    ],
+    "Training": [
+     15
+    ],
+    "CNNs": [
+     16
+    ],
+    "requires": [
+     17
+    ],
+    "large": [
+     19
+    ],
+    "amount": [
+     20
+    ],
+    "of": [
+     21,
+     96,
+     180
+    ],
+    "labeled": [
+     22
+    ],
+    "data,": [
+     23
+    ],
+    "but": [
+     24
+    ],
+    "manually": [
+     25
+    ],
+    "annotating": [
+     26
+    ],
+    "data": [
+     27,
+     58,
+     90
+    ],
+    "difficult.": [
+     29
+    ],
+    "For": [
+     30
+    ],
+    "emancipating": [
+     31
+    ],
+    "manpower,": [
+     32
+    ],
+    "in": [
+     33,
+     183
+    ],
+    "recent": [
+     34
+    ],
+    "years,": [
+     35
+    ],
+    "some": [
+     36
+    ],
+    "synthetic": [
+     37,
+     57,
+     89
+    ],
+    "datasets": [
+     38
+    ],
+    "are": [
+     39,
+     43,
+     148
+    ],
+    "released.": [
+     40
+    ],
+    "However,": [
+     41
+    ],
+    "they": [
+     42
+    ],
+    "still": [
+     44
+    ],
+    "different": [
+     45
+    ],
+    "from": [
+     46,
+     88,
+     126,
+     138
+    ],
+    "real": [
+     47,
+     67,
+     92
+    ],
+    "scenes,": [
+     48,
+     93
+    ],
+    "which": [
+     49,
+     94,
+     127,
+     139
+    ],
+    "causes": [
+     50
+    ],
+    "that": [
+     51
+    ],
+    "training": [
+     52
+    ],
+    "model": [
+     54,
+     106
+    ],
+    "on": [
+     55,
+     66,
+     108
+    ],
+    "the": [
+     56,
+     85,
+     123,
+     136,
+     151,
+     158,
+     161,
+     177,
+     184
+    ],
+    "(source": [
+     59
+    ],
+    "domain)": [
+     60
+    ],
+    "cannot": [
+     61
+    ],
+    "achieve": [
+     62
+    ],
+    "good": [
+     64
+    ],
+    "performance": [
+     65,
+     87
+    ],
+    "urban": [
+     68
+    ],
+    "scenes": [
+     69
+    ],
+    "(target": [
+     70
+    ],
+    "domain).": [
+     71
+    ],
+    "In": [
+     72,
+     171
+    ],
+    "this": [
+     73
+    ],
+    "paper,": [
+     74
+    ],
+    "we": [
+     75
+    ],
+    "propose": [
+     76
+    ],
+    "weakly": [
+     78
+    ],
+    "supervised": [
+     79
+    ],
+    "adversarial": [
+     80,
+     162
+    ],
+    "domain": [
+     81,
+     117,
+     132
+    ],
+    "adaptation": [
+     82
+    ],
+    "to": [
+     83,
+     91,
+     121,
+     167
+    ],
+    "improve": [
+     84
+    ],
+    "segmentation": [
+     86,
+     104,
+     113
+    ],
+    "consists": [
+     95
+    ],
+    "three": [
+     97
+    ],
+    "deep": [
+     98
+    ],
+    "networks.": [
+     100
+    ],
+    "A": [
+     101
+    ],
+    "detection": [
+     102
+    ],
+    "and": [
+     103,
+     111,
+     129,
+     141,
+     146,
+     153
+    ],
+    "(DS)": [
+     105
+    ],
+    "focuses": [
+     107
+    ],
+    "detecting": [
+     109
+    ],
+    "objects": [
+     110,
+     137
+    ],
+    "predicting": [
+     112
+    ],
+    "map;": [
+     114
+    ],
+    "classifier": [
+     118,
+     133
+    ],
+    "(PDC)": [
+     119
+    ],
+    "tries": [
+     120
+    ],
+    "distinguish": [
+     122
+    ],
+    "image": [
+     124
+    ],
+    "features": [
+     125
+    ],
+    "domains;": [
+     128
+    ],
+    "an": [
+     130
+    ],
+    "object-level": [
+     131
+    ],
+    "(ODC)": [
+     134
+    ],
+    "discriminates": [
+     135
+    ],
+    "domains": [
+     140
+    ],
+    "predicts": [
+     142
+    ],
+    "object": [
+     143
+    ],
+    "classes.": [
+     144
+    ],
+    "PDC": [
+     145
+    ],
+    "ODC": [
+     147
+    ],
+    "treated": [
+     149
+    ],
+    "as": [
+     150,
+     157
+    ],
+    "discriminators,": [
+     152
+    ],
+    "DS": [
+     154,
+     164
+    ],
+    "considered": [
+     156
+    ],
+    "generator.": [
+     159
+    ],
+    "By": [
+     160
+    ],
+    "learning,": [
+     163
+    ],
+    "supposed": [
+     166
+    ],
+    "learn": [
+     168
+    ],
+    "domain-invariant": [
+     169
+    ],
+    "features.": [
+     170
+    ],
+    "experiments,": [
+     172
+    ],
+    "our": [
+     173
+    ],
+    "proposed": [
+     174
+    ],
+    "method": [
+     175
+    ],
+    "yields": [
+     176
+    ],
+    "new": [
+     178
+    ],
+    "record": [
+     179
+    ],
+    "mIoU": [
+     181
+    ],
+    "metric": [
+     182
+    ],
+    "same": [
+     185
+    ],
+    "problem.": [
+     186
+    ]
+   },
+   "publication_date": "2019-04-17",
+   "primary_topic": {
+    "display_name": "Advanced Neural Network Applications"
+   },
+   "concepts": [
+    {
+     "display_name": "Adversarial system"
+    },
+    {
+     "display_name": "Domain adaptation"
+    },
+    {
+     "display_name": "Artificial intelligence"
+    }
+   ]
+  },
+  {
+   "id": "https://openalex.org/W2945586026",
+   "title": "A Mini-Review of Virtual Reality-Based Interventions to Promote Well-Being for People Living with Dementia and Mild Cognitive Impairment",
+   "display_name": "A Mini-Review of Virtual Reality-Based Interventions to Promote Well-Being for People Living with Dementia and Mild Cognitive Impairment",
+   "abstract_inverted_index": {
+    "Assistive": [
+     0
+    ],
+    "technology": [
+     1,
+     22,
+     183,
+     211,
+     244
+    ],
+    "including": [
+     2,
+     248
+    ],
+    "virtual": [
+     3,
+     70,
+     106,
+     140,
+     179,
+     240
+    ],
+    "reality": [
+     4,
+     7,
+     73,
+     112,
+     182,
+     243
+    ],
+    "and": [
+     5,
+     37,
+     49,
+     71,
+     83,
+     86,
+     98,
+     110,
+     123,
+     150,
+     152,
+     164,
+     180,
+     186,
+     191,
+     199,
+     220,
+     230,
+     241,
+     251
+    ],
+    "augmented": [
+     6,
+     72,
+     111,
+     181,
+     242
+    ],
+    "has": [
+     8,
+     23
+    ],
+    "gained": [
+     9
+    ],
+    "interest": [
+     10
+    ],
+    "as": [
+     11
+    ],
+    "a": [
+     12,
+     16,
+     30,
+     189
+    ],
+    "novel": [
+     13,
+     190
+    ],
+    "intervention": [
+     14
+    ],
+    "in": [
+     15,
+     118,
+     127,
+     166,
+     216,
+     228
+    ],
+    "range": [
+     17
+    ],
+    "of": [
+     18,
+     40,
+     69,
+     94,
+     172,
+     178,
+     209,
+     235,
+     239,
+     257
+    ],
+    "clinical": [
+     19
+    ],
+    "settings.": [
+     20,
+     223
+    ],
+    "This": [
+     21
+    ],
+    "the": [
+     24,
+     59,
+     66,
+     139,
+     145,
+     170,
+     173,
+     176,
+     206,
+     218,
+     233,
+     255
+    ],
+    "potential": [
+     25,
+     67,
+     207
+    ],
+    "to": [
+     26,
+     32,
+     43,
+     74,
+     102,
+     129,
+     212
+    ],
+    "provide": [
+     27,
+     75,
+     196
+    ],
+    "mental": [
+     28
+    ],
+    "stimulation,": [
+     29
+    ],
+    "connection": [
+     31
+    ],
+    "autobiographical": [
+     33
+    ],
+    "memory": [
+     34
+    ],
+    "through": [
+     35
+    ],
+    "reminiscence,": [
+     36
+    ],
+    "enhanced": [
+     38
+    ],
+    "quality": [
+     39
+    ],
+    "life": [
+     41
+    ],
+    "(QoL)": [
+     42
+    ],
+    "people": [
+     44
+    ],
+    "living": [
+     45
+    ],
+    "with": [
+     46,
+     135,
+     157,
+     254
+    ],
+    "dementia": [
+     47
+    ],
+    "(PLWD)": [
+     48
+    ],
+    "mild": [
+     50
+    ],
+    "cognitive": [
+     51,
+     197
+    ],
+    "impairment": [
+     52
+    ],
+    "(MCI).": [
+     53
+    ],
+    "In": [
+     54,
+     90
+    ],
+    "this": [
+     55,
+     210
+    ],
+    "mini-review,": [
+     56
+    ],
+    "we": [
+     57
+    ],
+    "examine": [
+     58
+    ],
+    "available": [
+     60
+    ],
+    "evidence": [
+     61
+    ],
+    "from": [
+     62
+    ],
+    "studies": [
+     63,
+     93,
+     227
+    ],
+    "reporting": [
+     64
+    ],
+    "on": [
+     65,
+     245
+    ],
+    "benefits": [
+     68
+    ],
+    "enjoyable,": [
+     76
+    ],
+    "leisurely": [
+     77
+    ],
+    "activities": [
+     78
+    ],
+    "that": [
+     79,
+     132
+    ],
+    "may": [
+     80,
+     195
+    ],
+    "promote": [
+     81,
+     213
+    ],
+    "QoL": [
+     82
+    ],
+    "psychological": [
+     84,
+     246
+    ],
+    "well-being": [
+     85
+    ],
+    "facilitate": [
+     87
+    ],
+    "social": [
+     88,
+     214
+    ],
+    "interaction.": [
+     89
+    ],
+    "total,": [
+     91
+    ],
+    "10": [
+     92
+    ],
+    "varying": [
+     95
+    ],
+    "study": [
+     96,
+     131,
+     167
+    ],
+    "designs": [
+     97
+    ],
+    "durations": [
+     99
+    ],
+    "(5": [
+     100
+    ],
+    "min": [
+     101
+    ],
+    "6": [
+     103
+    ],
+    "months)": [
+     104
+    ],
+    "using": [
+     105
+    ],
+    "(n": [
+     107,
+     113,
+     120
+    ],
+    "=": [
+     108,
+     114,
+     121
+    ],
+    "9)": [
+     109
+    ],
+    "1)": [
+     115
+    ],
+    "were": [
+     116,
+     142,
+     153
+    ],
+    "examined": [
+     117
+    ],
+    "PLWD": [
+     119,
+     185,
+     229
+    ],
+    "6)": [
+     122
+    ],
+    "MCI": [
+     124,
+     187,
+     231
+    ],
+    "(n=": [
+     125
+    ],
+    "3),": [
+     126
+    ],
+    "addition": [
+     128
+    ],
+    "1": [
+     130
+    ],
+    "included": [
+     133
+    ],
+    "participants": [
+     134
+    ],
+    "both": [
+     136,
+     217
+    ],
+    "conditions.": [
+     137
+    ],
+    "Overall,": [
+     138
+    ],
+    "experiences": [
+     141
+    ],
+    "enjoyed": [
+     143
+    ],
+    "by": [
+     144
+    ],
+    "participants,": [
+     146
+    ],
+    "improved": [
+     147
+    ],
+    "their": [
+     148
+    ],
+    "mood": [
+     149
+    ],
+    "apathy,": [
+     151,
+     250
+    ],
+    "preferred": [
+     154
+    ],
+    "when": [
+     155
+    ],
+    "compared": [
+     156
+    ],
+    "nonvirtual": [
+     158
+    ],
+    "experiences.": [
+     159
+    ],
+    "However,": [
+     160
+    ],
+    "small": [
+     161
+    ],
+    "sample": [
+     162
+    ],
+    "sizes": [
+     163
+    ],
+    "variations": [
+     165
+    ],
+    "design": [
+     168
+    ],
+    "limit": [
+     169
+    ],
+    "generalizability": [
+     171
+    ],
+    "results.": [
+     174
+    ],
+    "Nevertheless,": [
+     175
+    ],
+    "use": [
+     177,
+     238
+    ],
+    "for": [
+     184
+    ],
+    "is": [
+     188
+    ],
+    "emerging": [
+     192
+    ],
+    "method": [
+     193
+    ],
+    "which": [
+     194
+    ],
+    "stimulation": [
+     198
+    ],
+    "improve": [
+     200
+    ],
+    "well-being.": [
+     201
+    ],
+    "Future": [
+     202
+    ],
+    "research": [
+     203
+    ],
+    "should": [
+     204
+    ],
+    "explore": [
+     205
+    ],
+    "application": [
+     208
+    ],
+    "interaction": [
+     215
+    ],
+    "community": [
+     219
+    ],
+    "aged": [
+     221
+    ],
+    "care": [
+     222
+    ],
+    "We": [
+     224
+    ],
+    "suggest": [
+     225
+    ],
+    "future": [
+     226
+    ],
+    "assess": [
+     232
+    ],
+    "effects": [
+     234
+    ],
+    "more": [
+     236
+    ],
+    "sustained": [
+     237
+    ],
+    "outcomes": [
+     247
+    ],
+    "QoL,": [
+     249
+    ],
+    "depressive": [
+     252
+    ],
+    "symptoms,": [
+     253
+    ],
+    "incorporation": [
+     256
+    ],
+    "physiological": [
+     258
+    ],
+    "biomarker": [
+     259
+    ],
+    "outcomes.": [
+     260
+    ]
+   },
+   "publication_date": "2019-01-01",
+   "primary_topic": {
+    "display_name": "Dementia and Cognitive Impairment Research"
+   },
+   "concepts": [
+    {
+     "display_name": "Apathy"
+    },
+    {
+     "display_name": "Dementia"
+    },
+    {
+     "display_name": "Mood"
+    }
+   ]
+  },
+  {
+   "id": "https://openalex.org/W2955353723",
+   "title": "ToothNet: Automatic Tooth Instance Segmentation and Identification From Cone Beam CT Images",
+   "display_name": "ToothNet: Automatic Tooth Instance Segmentation and Identification From Cone Beam CT Images",
+   "abstract_inverted_index": {
+    "This": [
+     0
+    ],
+    "paper": [
+     1
+    ],
+    "proposes": [
+     2
+    ],
+    "a": [
+     3,
+     36,
+     90
+    ],
+    "method": [
+     4,
+     34,
+     147,
+     168
+    ],
+    "that": [
+     5,
+     145
+    ],
+    "uses": [
+     6
+    ],
+    "deep": [
+     7
+    ],
+    "convolutional": [
+     8
+    ],
+    "neural": [
+     9,
+     174
+    ],
+    "networks": [
+     10,
+     175
+    ],
+    "to": [
+     11,
+     53,
+     70,
+     94,
+     131,
+     172,
+     176
+    ],
+    "achieve": [
+     12,
+     177
+    ],
+    "automatic": [
+     13,
+     178
+    ],
+    "and": [
+     14,
+     19,
+     64,
+     103,
+     140,
+     152,
+     156,
+     181
+    ],
+    "accurate": [
+     15,
+     149
+    ],
+    "tooth": [
+     16,
+     179
+    ],
+    "instance": [
+     17,
+     150
+    ],
+    "segmentation": [
+     18,
+     151,
+     180
+    ],
+    "identification": [
+     20,
+     113,
+     127,
+     135,
+     153,
+     182
+    ],
+    "from": [
+     21,
+     48,
+     183
+    ],
+    "CBCT": [
+     22,
+     51,
+     184
+    ],
+    "(cone": [
+     23
+    ],
+    "beam": [
+     24
+    ],
+    "CT)": [
+     25
+    ],
+    "images": [
+     26,
+     67
+    ],
+    "for": [
+     27
+    ],
+    "digital": [
+     28
+    ],
+    "dentistry.": [
+     29
+    ],
+    "The": [
+     30
+    ],
+    "core": [
+     31
+    ],
+    "of": [
+     32,
+     164
+    ],
+    "our": [
+     33,
+     80,
+     146,
+     165,
+     167
+    ],
+    "is": [
+     35,
+     46,
+     169
+    ],
+    "two-stage": [
+     37
+    ],
+    "network.": [
+     38
+    ],
+    "In": [
+     39,
+     74
+    ],
+    "the": [
+     40,
+     49,
+     65,
+     71,
+     75,
+     83,
+     109,
+     112,
+     126,
+     134,
+     158,
+     162,
+     170
+    ],
+    "first": [
+     41,
+     171
+    ],
+    "stage,": [
+     42,
+     77
+    ],
+    "an": [
+     43,
+     121
+    ],
+    "edge": [
+     44,
+     62
+    ],
+    "map": [
+     45,
+     63
+    ],
+    "extracted": [
+     47
+    ],
+    "input": [
+     50,
+     66,
+     124
+    ],
+    "image": [
+     52,
+     55
+    ],
+    "enhance": [
+     54
+    ],
+    "contrast": [
+     56
+    ],
+    "along": [
+     57
+    ],
+    "shape": [
+     58
+    ],
+    "boundaries.": [
+     59
+    ],
+    "Then": [
+     60
+    ],
+    "this": [
+     61
+    ],
+    "are": [
+     68
+    ],
+    "passed": [
+     69
+    ],
+    "second": [
+     72,
+     76
+    ],
+    "stage.": [
+     73
+    ],
+    "we": [
+     78,
+     115
+    ],
+    "build": [
+     79
+    ],
+    "network": [
+     81,
+     87
+    ],
+    "upon": [
+     82
+    ],
+    "3D": [
+     84
+    ],
+    "region": [
+     85
+    ],
+    "proposal": [
+     86
+    ],
+    "(RPN)": [
+     88
+    ],
+    "with": [
+     89
+    ],
+    "novel": [
+     91
+    ],
+    "learned-similarity": [
+     92
+    ],
+    "matrix": [
+     93
+    ],
+    "help": [
+     95
+    ],
+    "efficiently": [
+     96
+    ],
+    "remove": [
+     97
+    ],
+    "redundant": [
+     98
+    ],
+    "proposals,": [
+     99
+    ],
+    "speed": [
+     100
+    ],
+    "up": [
+     101
+    ],
+    "training": [
+     102
+    ],
+    "save": [
+     104
+    ],
+    "GPU": [
+     105
+    ],
+    "memory.": [
+     106
+    ],
+    "To": [
+     107,
+     161
+    ],
+    "resolve": [
+     108
+    ],
+    "ambiguity": [
+     110
+    ],
+    "in": [
+     111,
+     125
+    ],
+    "task,": [
+     114,
+     128
+    ],
+    "encode": [
+     116
+    ],
+    "teeth": [
+     117
+    ],
+    "spatial": [
+     118
+    ],
+    "relationships": [
+     119
+    ],
+    "as": [
+     120
+    ],
+    "additional": [
+     122
+    ],
+    "feature": [
+     123
+    ],
+    "which": [
+     129
+    ],
+    "helps": [
+     130
+    ],
+    "remarkably": [
+     132
+    ],
+    "improve": [
+     133
+    ],
+    "accuracy.": [
+     136
+    ],
+    "Our": [
+     137
+    ],
+    "evaluation,": [
+     138
+    ],
+    "comparison": [
+     139
+    ],
+    "comprehensive": [
+     141
+    ],
+    "ablation": [
+     142
+    ],
+    "studies": [
+     143
+    ],
+    "demonstrate": [
+     144
+    ],
+    "produces": [
+     148
+    ],
+    "results": [
+     154
+    ],
+    "automatically": [
+     155
+    ],
+    "outperforms": [
+     157
+    ],
+    "state-of-the-art": [
+     159
+    ],
+    "approaches.": [
+     160
+    ],
+    "best": [
+     163
+    ],
+    "knowledge,": [
+     166
+    ],
+    "use": [
+     173
+    ],
+    "images.": [
+     185
+    ]
+   },
+   "publication_date": "2019-06-01",
+   "primary_topic": {
+    "display_name": "Dental Radiography and Imaging"
+   },
+   "concepts": [
+    {
+     "display_name": "Artificial intelligence"
+    },
+    {
+     "display_name": "Computer science"
+    },
+    {
+     "display_name": "Segmentation"
+    }
+   ]
+  },
+  {
+   "id": "https://openalex.org/W2939571759",
+   "title": "DUPLICATE ID - should be deduped",
+   "display_name": "DUPLICATE ID - should be deduped",
+   "abstract_inverted_index": {
+    "Semantic": [
+     0
+    ],
+    "segmentation,": [
+     1
+    ],
+    "a": [
+     2,
+     18,
+     53,
+     63,
+     77,
+     115
+    ],
+    "pixel-level": [
+     3,
+     116
+    ],
+    "vision": [
+     4
+    ],
+    "task,": [
+     5
+    ],
+    "is": [
+     6,
+     28,
+     155,
+     165
+    ],
+    "rapidly": [
+     7
+    ],
+    "developed": [
+     8
+    ],
+    "by": [
+     9
+    ],
+    "using": [
+     10
+    ],
+    "convolutional": [
+     11
+    ],
+    "neural": [
+     12,
+     99
+    ],
+    "networks": [
+     13
+    ],
+    "(CNNs).": [
+     14
+    ],
+    "Training": [
+     15
+    ],
+    "CNNs": [
+     16
+    ],
+    "requires": [
+     17
+    ],
+    "large": [
+     19
+    ],
+    "amount": [
+     20
+    ],
+    "of": [
+     21,
+     96,
+     180
+    ],
+    "labeled": [
+     22
+    ],
+    "data,": [
+     23
+    ],
+    "but": [
+     24
+    ],
+    "manually": [
+     25
+    ],
+    "annotating": [
+     26
+    ],
+    "data": [
+     27,
+     58,
+     90
+    ],
+    "difficult.": [
+     29
+    ],
+    "For": [
+     30
+    ],
+    "emancipating": [
+     31
+    ],
+    "manpower,": [
+     32
+    ],
+    "in": [
+     33,
+     183
+    ],
+    "recent": [
+     34
+    ],
+    "years,": [
+     35
+    ],
+    "some": [
+     36
+    ],
+    "synthetic": [
+     37,
+     57,
+     89
+    ],
+    "datasets": [
+     38
+    ],
+    "are": [
+     39,
+     43,
+     148
+    ],
+    "released.": [
+     40
+    ],
+    "However,": [
+     41
+    ],
+    "they": [
+     42
+    ],
+    "still": [
+     44
+    ],
+    "different": [
+     45
+    ],
+    "from": [
+     46,
+     88,
+     126,
+     138
+    ],
+    "real": [
+     47,
+     67,
+     92
+    ],
+    "scenes,": [
+     48,
+     93
+    ],
+    "which": [
+     49,
+     94,
+     127,
+     139
+    ],
+    "causes": [
+     50
+    ],
+    "that": [
+     51
+    ],
+    "training": [
+     52
+    ],
+    "model": [
+     54,
+     106
+    ],
+    "on": [
+     55,
+     66,
+     108
+    ],
+    "the": [
+     56,
+     85,
+     123,
+     136,
+     151,
+     158,
+     161,
+     177,
+     184
+    ],
+    "(source": [
+     59
+    ],
+    "domain)": [
+     60
+    ],
+    "cannot": [
+     61
+    ],
+    "achieve": [
+     62
+    ],
+    "good": [
+     64
+    ],
+    "performance": [
+     65,
+     87
+    ],
+    "urban": [
+     68
+    ],
+    "scenes": [
+     69
+    ],
+    "(target": [
+     70
+    ],
+    "domain).": [
+     71
+    ],
+    "In": [
+     72,
+     171
+    ],
+    "this": [
+     73
+    ],
+    "paper,": [
+     74
+    ],
+    "we": [
+     75
+    ],
+    "propose": [
+     76
+    ],
+    "weakly": [
+     78
+    ],
+    "supervised": [
+     79
+    ],
+    "adversarial": [
+     80,
+     162
+    ],
+    "domain": [
+     81,
+     117,
+     132
+    ],
+    "adaptation": [
+     82
+    ],
+    "to": [
+     83,
+     91,
+     121,
+     167
+    ],
+    "improve": [
+     84
+    ],
+    "segmentation": [
+     86,
+     104,
+     113
+    ],
+    "consists": [
+     95
+    ],
+    "three": [
+     97
+    ],
+    "deep": [
+     98
+    ],
+    "networks.": [
+     100
+    ],
+    "A": [
+     101
+    ],
+    "detection": [
+     102
+    ],
+    "and": [
+     103,
+     111,
+     129,
+     141,
+     146,
+     153
+    ],
+    "(DS)": [
+     105
+    ],
+    "focuses": [
+     107
+    ],
+    "detecting": [
+     109
+    ],
+    "objects": [
+     110,
+     137
+    ],
+    "predicting": [
+     112
+    ],
+    "map;": [
+     114
+    ],
+    "classifier": [
+     118,
+     133
+    ],
+    "(PDC)": [
+     119
+    ],
+    "tries": [
+     120
+    ],
+    "distinguish": [
+     122
+    ],
+    "image": [
+     124
+    ],
+    "features": [
+     125
+    ],
+    "domains;": [
+     128
+    ],
+    "an": [
+     130
+    ],
+    "object-level": [
+     131
+    ],
+    "(ODC)": [
+     134
+    ],
+    "discriminates": [
+     135
+    ],
+    "domains": [
+     140
+    ],
+    "predicts": [
+     142
+    ],
+    "object": [
+     143
+    ],
+    "classes.": [
+     144
+    ],
+    "PDC": [
+     145
+    ],
+    "ODC": [
+     147
+    ],
+    "treated": [
+     149
+    ],
+    "as": [
+     150,
+     157
+    ],
+    "discriminators,": [
+     152
+    ],
+    "DS": [
+     154,
+     164
+    ],
+    "considered": [
+     156
+    ],
+    "generator.": [
+     159
+    ],
+    "By": [
+     160
+    ],
+    "learning,": [
+     163
+    ],
+    "supposed": [
+     166
+    ],
+    "learn": [
+     168
+    ],
+    "domain-invariant": [
+     169
+    ],
+    "features.": [
+     170
+    ],
+    "experiments,": [
+     172
+    ],
+    "our": [
+     173
+    ],
+    "proposed": [
+     174
+    ],
+    "method": [
+     175
+    ],
+    "yields": [
+     176
+    ],
+    "new": [
+     178
+    ],
+    "record": [
+     179
+    ],
+    "mIoU": [
+     181
+    ],
+    "metric": [
+     182
+    ],
+    "same": [
+     185
+    ],
+    "problem.": [
+     186
+    ]
+   },
+   "publication_date": "2019-04-17",
+   "primary_topic": {
+    "display_name": "Advanced Neural Network Applications"
+   },
+   "concepts": [
+    {
+     "display_name": "Adversarial system"
+    },
+    {
+     "display_name": "Domain adaptation"
+    },
+    {
+     "display_name": "Artificial intelligence"
+    }
+   ]
+  }
+ ],
+ "meta": {
+  "next_cursor": null
+ }
+}

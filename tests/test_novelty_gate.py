@@ -92,3 +92,46 @@ def test_shingles_and_cny_handle_short_text():
     assert ng._shingles("singleword") == {"singleword"}
     out = ng.cny([_rec("q1", "confirmed", "novel")], seen_keys=set(), corpus=[], tau=0.5)
     assert out["cny"] == 1   # 1-word confirmed finding, empty corpus -> fully novel
+
+
+# --- Saturation-gate calibration (the warrant for the ENFORCING default) -------------------------------------
+# README.md / SKILL.md claim the gate is "calibrated to tau=0.30 / floor=0 / window=3 on three diverse multi-loop
+# curves" with zero false positives/negatives. These tests re-derive that claim from the shipped curves, so a
+# reader can check the ENFORCING default from a clone — no network, no credential, no live run required.
+import json
+
+_CALIB = json.loads((pathlib.Path(__file__).resolve().parent / "fixtures" /
+                     "novelty-gate-calibration-curves.json").read_text(encoding="utf-8"))
+
+
+def _first_collapse_loop(cny_history, *, floor, window):
+    """Replay the gate prospectively, loop by loop, exactly as the live engine does: return the 1-indexed loop
+    at which yield_collapse first fires over the history-so-far, or None if it never fires."""
+    for i in range(1, len(cny_history) + 1):
+        if ng.yield_collapse(cny_history[:i], floor=floor, window=window)["collapsed"]:
+            return i
+    return None
+
+
+def test_calibration_fixture_matches_the_documented_params():
+    # the adopted params are exactly the ones README.md/SKILL.md advertise as the enforcing default
+    assert _CALIB["adopted_params"] == {"tau": 0.30, "floor": 0, "window": 3}
+    assert len(_CALIB["curves"]) == 3
+    assert {c["shape"] for c in _CALIB["curves"]} == {"sharp", "steady-productive", "bursty"}
+
+
+def test_calibration_adopted_params_classify_all_three_curves_with_zero_errors():
+    # THE claim: floor=0 / window=3 classifies all three curves correctly -- no false positive, no false negative
+    p = _CALIB["adopted_params"]
+    for curve in _CALIB["curves"]:
+        got = _first_collapse_loop(curve["cny_history"], floor=p["floor"], window=p["window"])
+        assert (got is not None) == curve["expected_collapse"], f"{curve['id']}: {curve['why']}"
+        assert got == curve["expected_first_collapse_loop"], f"{curve['id']}: fired at loop {got}"
+
+
+def test_calibration_window_2_is_rejected_because_it_false_fires_on_the_bursty_curve():
+    # the recorded reason window=2 was rejected: it fires in the [0,0] valley BEFORE the burst of 13 arrives
+    bursty = next(c for c in _CALIB["curves"] if c["id"] == "exp3_ai_safety")
+    assert _first_collapse_loop(bursty["cny_history"], floor=0, window=2) == 4   # false positive
+    assert _first_collapse_loop(bursty["cny_history"], floor=0, window=3) is None  # window=3 does not
+    assert bursty["cny_history"][4] == 13   # ...and a productive burst really does follow the valley

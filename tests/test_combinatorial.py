@@ -134,3 +134,51 @@ def test_admit_does_not_alias_candidate():
     arch = cb.admit({}, cell=(0,0,0), candidate=cand, creativity=0.5)
     cand["claim"] = "MUTATED"
     assert arch[(0,0,0)]["candidate"]["claim"] == "x"   # archive holds a copy, not a reference
+
+def test_parse_judge_clamps_and_tolerant():
+    r = cb.parse_judge('{"nearest_prior_work":"Smith 2020","plausibility":1.4,"utility":-0.2,"rationale":"x"}')
+    assert r["nearest_prior_work"] == "Smith 2020"
+    assert r["plausibility"] == 1.0 and r["utility"] == 0.0      # clamped to [0,1]
+    assert r["rationale"] == "x"
+    # fenced JSON + missing fields -> defaults
+    r2 = cb.parse_judge("```json\n{\"plausibility\":0.5}\n```")
+    assert r2["plausibility"] == 0.5 and r2["utility"] == 0.0 and r2["nearest_prior_work"] == ""
+    assert cb.parse_judge("not json at all") == {"nearest_prior_work": "", "plausibility": 0.0,
+                                                 "utility": 0.0, "rationale": ""}
+
+def test_aggregate_utility_mean_of_products():
+    js = [{"plausibility": 0.8, "utility": 0.5}, {"plausibility": 1.0, "utility": 1.0}]  # 0.40, 1.00 -> mean 0.70
+    assert abs(cb.aggregate_utility(js) - 0.70) < 1e-9
+    assert cb.aggregate_utility([]) == 0.0
+    # accepts raw judge responses (parsed via parse_judge)
+    assert abs(cb.aggregate_utility(['{"plausibility":1.0,"utility":1.0}']) - 1.0) < 1e-9
+
+def test_ground_prompt_contains_claim_and_strict_json():
+    p = cb.ground_prompt({"claim": "model cytokine storms as cascading failures", "mechanism": "backpressure"})
+    assert "model cytokine storms as cascading failures" in p
+    assert "backpressure" in p
+    assert "STRICT JSON" in p and "grounded" in p
+
+def test_parse_grounding_fail_closed():
+    assert cb.parse_grounding('{"grounded": true, "verdict": "survives", "evidence": "arXiv:x"}')["grounded"] is True
+    assert cb.parse_grounding('{"grounded": false, "verdict": "refuted"}')["grounded"] is False
+    assert cb.parse_grounding("garbage")["grounded"] is False          # unparseable -> fail-closed False
+    assert cb.parse_grounding('{"verdict":"survives"}')["grounded"] is False   # missing -> False
+    assert cb.parse_grounding('{"grounded":"yes"}')["grounded"] is True        # string truthy accepted
+
+def test_run_round_wires_novelty_map_and_aggregate_utility():
+    # the EXACT shape combine_live uses: precomputed novelty map + aggregate_utility over per-judge dicts.
+    combos = [{"id": "c1", "domain_a": "immunology", "domain_b": "distributed systems",
+               "mechanism": "backpressure", "claim": "model cytokine storms as cascading failures"},
+              {"id": "c2", "domain_a": "x", "domain_b": "x", "mechanism": "m", "claim": "self-combo"}]  # da==db incoherent
+    novelty_map = {"c1": 0.9, "c2": 0.9}
+    judge_dicts = {"c1": [{"plausibility": 0.8, "utility": 0.7}, {"plausibility": 0.9, "utility": 0.6}],
+                   "c2": [{"plausibility": 0.1, "utility": 0.1}]}
+    util_map = {cid: cb.aggregate_utility(js) for cid, js in judge_dicts.items()}
+    res = cb.run_round(combos, novelty_fn=lambda c: novelty_map[c["id"]],
+                       utility_fn=lambda c: util_map.get(c["id"], 0.0))
+    assert "c2" in res["rejected_incoherent"]                 # da==db -> structural_coherence rejects pre-scoring
+    assert any(a["id"] == "c1" for a in res["admitted"])      # c1 admitted (creativity = 0.9 * mean(0.56,0.54) > 0)
+    assert res["archive"]                                     # non-empty archive
+    assert res["report"]["qd_score_is_upper_bound"] is True   # honest report shape
+    assert res["report"]["post_grounding_survival_rate"] is None   # no grounding data here -> honestly undefined

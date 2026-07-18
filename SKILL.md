@@ -233,14 +233,17 @@ The interactive pipeline above stops and asks at every gate. The **Tier-2 durabl
 - **Guarantee = at-least-once + idempotency** (the upstream gateway has no request dedup). Cost backstop = **pessimistic spend reservation**: `Tracker.reserve(est)` before the call (with `audit.append_ledger(intent, fsync=True)`), released only on a confirmed result — the in-memory reservation prevents live (within-process) over-spend; the REBOOT-durable backstop is the fsync'd `known-incomplete` intent record on disk, which resume re-drives (at-least-once).
 - **Pacing:** `pacing.pacing_decision(signals)` → proceed / graceful-pause (429 / low `anthropic-ratelimit-*`) / hard-stop (Anthropic monthly cap / OpenRouter 402); `pacing.ramp_after_idle` ramps traffic up gradually after a pause.
 - **Per-loop gate:** `orchestrator.loop_decision` composes pacing + the spend-tolerance breach → continue / pause / stop, surfacing the over-tolerance OPTION MENU (the §"The scope dial" menu).
-- **Novelty / saturation gate (CALIBRATED + ENFORCING by default):** `novelty_gate.cny(...)` measures *Confirmed-Novelty Yield* — new confirmed findings per loop, filtered by a two-stage dedup + distance — computed **ONLY over `validation_verdict=='confirmed'` records**, so a loop emitting varied-but-*fabricated* findings scores 0 (the audit-v2 honesty invariant doubles as the anti-gaming property). `novelty_gate.yield_collapse(...)` (an SPC K-consecutive-low run-rule) flags yield-collapse; on collapse `loop_decision` **pauses-and-pings the human — it never auto-stops** (corrigible). **Calibrated 2026-06-23** on 3 diverse multi-loop curves (sharp / steady-productive / bursty): **`tau=0.30` / `floor=0` / `window=3`** classify all three with zero false positives/negatives, so the gate now **ENFORCES by default** (`--novelty-enforcing`; `--no-novelty-enforcing` restores WARN-only). It is a *saturation* signal ("still finding new validated things?"), NOT a value-aware fitness function (the Tier-3 value axis below stays ADVISORY — the Goodhart-hard problem).
+- **Novelty / saturation gate (CALIBRATED + ENFORCING by default):** `novelty_gate.cny(...)` measures *Confirmed-Novelty Yield* — new confirmed findings per loop, filtered by a two-stage dedup + distance — computed **ONLY over `validation_verdict=='confirmed'` records**, so a loop emitting varied-but-*fabricated* findings scores 0 (the audit-v2 honesty invariant doubles as the anti-gaming property). `novelty_gate.yield_collapse(...)` (an SPC K-consecutive-low run-rule) flags yield-collapse; on collapse `loop_decision` **pauses-and-pings the human — it never auto-stops** (corrigible). **Calibrated 2026-06-23** on 3 diverse multi-loop curves (sharp / steady-productive / bursty): **`tau=0.30` / `floor=0` / `window=3`** classify all three with zero false positives/negatives, so the gate now **ENFORCES by default** (`--novelty-enforcing`; `--no-novelty-enforcing` restores WARN-only). **The curves ship** (`tests/fixtures/novelty-gate-calibration-curves.json`) and `tests/test_novelty_gate.py::test_calibration_*` re-derives the calibration offline (they pass only for `window=3`; `window=2` is shown false-firing in the bursty curve's `[0,0]` valley). Honest caveat: `floor`/`window` are derived from these curves; **`tau` is UNDER-determined** by them (tau-invariant — the seen-set dedup dominates) and is held over from the prior default. Provenance: `references/measured-results.md` §4. It is a *saturation* signal ("still finding new validated things?"), NOT a value-aware fitness function (the Tier-3 value axis below stays ADVISORY — the Goodhart-hard problem).
 - **Host:** Agent SDK (Python) under a Windows Service / Task Scheduler `ONSTART /ru System`, `ANTHROPIC_API_KEY` from the service env (never `CLAUDE_CODE_OAUTH_TOKEN`; never Desktop/cloud). TOLERANCE stays a hard ceiling.
-- **§5.2 Nuclear engine (`scripts/nuclear.py`):** the autonomous *multi-loop* mode. An async Agent-SDK brain (`claude_agent_sdk.query`) drives, per loop: **decompose** (the FIRST loop decomposes the original question; each LATER loop re-decomposes FROM the prior loop's ranked gaps — the loop-evolution engine, so the engine chases the next question instead of re-asking) → **fleet fan-out** via `orchestrator_host.run_loop` (the durable record-before-call `fsync` + reservation; `query_id` is run-/loop-scoped so evolved loops fan out cleanly) → **hard-skeptic primary-source verify** (the brain with `WebSearch`/`WebFetch`) which writes each *confirmed* finding's `claim_text` into the ledger → **gap-evolution** (`nuclear_core.gap_prompt` → `loop_evolution.parse_gaps`/`rank_gaps`/`select_evolved_questions`: surface gaps + contradictions, rank contradictions first, filter, seed the next loop's decompose) → **novelty** (`novelty_gate.cny` over confirmed-only + `novelty_store` seen-set/corpus/CNY-history persistence + `yield_collapse`, now CALIBRATED + ENFORCING) → **pacing** (the live `RateLimitEvent` / `ResultMessage.api_error` → `pacing.rate_limit_signals` + `spend.quota_signals` → `pacing.pacing_decision`) → **per-loop decision** (`compose_loop_state` → `loop_decision` → the option menu / pause-and-ping) → **synthesize** over the confirmed corpus on stop. Operator subcommands: `estimate` (FREE — two-line estimate, no paid call) and `run --tolerance <usd>` (PAID, tiny by default). Layered money gates: the two-line estimate shown first, TOLERANCE as the hard ceiling, the **R8 burn gate** (`spend.requires_explicit_burn` → estimate over the threshold needs `--confirm "yes, burn it"`), and `ClaudeAgentOptions.max_budget_usd` per brain call. Keys load in-process from `~/.secrets/*.env`, never printed.
+- **§5.2 Nuclear engine (`scripts/nuclear.py`):** the autonomous *multi-loop* mode. An async Agent-SDK brain (`claude_agent_sdk.query`) drives, per loop: **decompose** (the FIRST loop decomposes the original question; each LATER loop re-decomposes FROM the prior loop's ranked gaps — the loop-evolution engine, so the engine chases the next question instead of re-asking) → **fleet fan-out** via `orchestrator_host.run_loop` (the durable record-before-call `fsync` + reservation; `query_id` is run-/loop-scoped so evolved loops fan out cleanly) → **hard-skeptic primary-source verify** (the brain with `WebSearch`/`WebFetch`) which writes each *confirmed* finding's `claim_text` into the ledger → **gap-evolution** (`nuclear_core.gap_prompt` → `loop_evolution.parse_gaps`/`rank_gaps`/`select_evolved_questions`: surface gaps + contradictions, rank contradictions first, filter, seed the next loop's decompose) → **novelty** (`novelty_gate.cny` over confirmed-only + `novelty_store` seen-set/corpus/CNY-history persistence + `yield_collapse`, now CALIBRATED + ENFORCING) → **pacing** (the live `RateLimitEvent` / `ResultMessage.api_error` → `pacing.rate_limit_signals` + `spend.quota_signals` → `pacing.pacing_decision`) → **per-loop decision** (`compose_loop_state` → `loop_decision` → the option menu / pause-and-ping) → **synthesize** over the confirmed corpus on stop. Operator subcommands: `estimate` (FREE — two-line estimate, no paid call) and `run --tolerance <usd>` (PAID, tiny by default). Layered money gates: the two-line estimate shown first, TOLERANCE as the hard ceiling, the **R8 burn gate** (`spend.requires_explicit_burn` → estimate over the threshold needs `--confirm "yes, burn it"`), and `ClaudeAgentOptions.max_budget_usd` per brain call. Keys come from the environment (`OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY` — the primary path); as an optional convenience the operator scripts also read `$LABCOAT_SECRETS_DIR/*.env` (default `~/.secrets/*.env` — one author's local layout, not a requirement), loading in-process, never printing the value, and announcing the source path so a credential is never picked up implicitly.
 - **Tier-3 — value-aware novelty + memory + degeneracy (ADVISORY):** the `cny` count axis is the *diversity* signal; Tier-3 adds the **quality** axis it omits. `value_axis.py` weights a confirmed finding by the number of **independent primary sources** that confirmed it (`source_count` → capped `quality_weight`), reports a quality-weighted yield (`weighted_cny`), keeps a MAP-Elites-lite **best-per-cell archive** (`qd_archive_update`), and runs the **degeneracy detector** (`weighted_yield_collapse` — the *same* SPC rule on the weighted scalar) plus `cost_per_verified_finding`. Persistence is the pluggable **`MemoryBackend` seam** (`memory_backend.py`): a stdlib-SQLite append-only **bi-temporal + provenance** backend (the §6.3 default; `--backend sqlite`) or a zero-dependency flat-file backend (`--backend file`) — drop-in interchangeable. **Every value-aware signal is ADVISORY: reported each loop, never consumed by `loop_decision`**, until calibrated on a recorded run (the value axis is the honestly-unsolved Goodhart-hard problem — the weight is capped, computed only over `confirmed`, and pairs with the detector as defense-in-depth, none Goodhart-proof).
 
-- **North-Star capabilities (2026-06-23):** **loop-evolution** (`loop_evolution.py` + `run_scope.py`) — **WIRED-LIVE**: each loop after the first re-decomposes from the prior loop's ranked gaps (contradictions first), so the engine *chases* the next question instead of re-asking; plus the run-scoped ledger fix so a shared workspace no longer collides across questions. **N1 literature-grounded novelty** (`n1_novelty.py` — RND-style relative-neighbor-density vs an external corpus + an injected-index adapter + a mandatory date-cutoff), **N3 combinatorial / analogical synthesis** (`combinatorial.py` — a MAP-Elites archive over `(domainA,domainB,mechanism)` + multiplicative `creativity = novelty × utility` + a proposer⊥judge separation), and **N2 gap / whitespace channels** (`gap_channels.py` — Swanson-ABC + future-work + contradiction → reconciliation) are **PURE, unit-tested, ADVISORY cores with DEFERRED live adapters** (the citation-aware embedder + ANN index, the live combinatorial generate-judge-ground loop, and the concept-graph extraction are not yet wired). They score/archive *injected* data today; they do **not** yet run end-to-end live.
+- **North-Star capabilities — WIRED-LIVE, validated to an ADVISORY bar.** **Loop-evolution** (`loop_evolution.py` + `run_scope.py`): each loop after the first re-decomposes from the prior loop's ranked gaps (contradictions first), so the engine *chases* the next question instead of re-asking; plus the run-scoped ledger fix so a shared workspace no longer collides across questions. The three research axes each have a **pure, unit-tested core AND a live adapter that runs end-to-end** — what each is *measured* to do, stated honestly:
+  - **N1 literature-grounded novelty** (`n1_novelty.py` core — RND-style relative-neighbor-density + a mandatory date-cutoff; `n1_embedder`/`n1_index`/`n1_corpus*`/`n1_build` adapters). **Runs live** over a SPECTER2 + faiss index (arXiv + an OpenAlex ~25k-work corpus). Its out-of-distribution gate is MEASURED: **held-out-field AUROC 0.889 [0.874, 0.904]**. Read it correctly — it is an **anti-out-of-corpus detector, NOT a general novelty oracle**; it is field-dependent, and it tells you a claim is far from *this corpus*, not that it is new to the world.
+  - **N3 combinatorial / analogical synthesis** (`combinatorial.py` core — a MAP-Elites archive over `(domainA,domainB,mechanism)` + multiplicative `creativity = novelty × utility` + a proposer⊥judge separation; `combine_live.py` adapter). **Runs live** end-to-end: propose → N1-novelty → judge → ground. A measured comparison **CONFIRMED the engine beats raw prompting on prior-art distance for DISTANT domain pairs only** (CMH p=7.4e-5; cluster-bootstrap CI [0.104, 0.320]). It does **not** beat raw prompting on near pairs. Its **soundness axis is HUMAN-GATED**: an LLM judge could not be validated past ~0.70 on hard negatives — it catches clear named-law violators but cannot separate a subtly incoherent cross-domain mapping from genuine novelty, so *verified-non-obvious* needs a human expert, not the panel.
+  - **N2 gap / whitespace channels** (`gap_channels.py` core — Swanson-ABC + future-work + contradiction → reconciliation; `gaps_live`/`n2_extract_llm`/`n2_crosslit`/`pubmed_adapter` adapters). **Runs live** — and carries an **HONEST NEGATIVE**: the count/co-occurrence Swanson-ABC channel **cannot discriminate a documented cross-literature discovery from big-literature spurious pairs** (the confound is literature SIZE; neither an IDF-specificity priority nor size-normalization rescued it). A PPMI + hub-exclusion fix removed **~99.85% of the noise flood**, which is a real win for the machinery — but the channel is not a discovery detector on raw co-occurrence. A **SEMANTIC substrate** (MeSH/UMLS semantic-type prefilter, SemMedDB predications, or LLM-relevance) is the known **deferred** next step.
 
-⚠ Built + how it's validated: `orchestrator_host.py` + **§5.2 Nuclear (`scripts/nuclear.py`)** are built and live-validated; the **loop-evolution engine is WIRED-LIVE** and the **saturation gate is CALIBRATED + ENFORCING** (2026-06-23, 3-curve calibration — see the gate bullet above). The **N1 / N3 / N2 cores are built + unit-tested but ADVISORY with deferred live adapters**, and the **Tier-3 value-axis + `MemoryBackend` + degeneracy detector stay ADVISORY** (the value axis is the honestly-unsolved Goodhart-hard problem). The pure core throughout (`nuclear_core`, `loop_evolution`, `n1_novelty`, `combinatorial`, `gap_channels`, `novelty_store`, `value_axis`, `memory_backend`, `spend`, `pacing`, `run_scope`) is unit-tested (**332 tests**); the live async `run` path is operator-gated + smoke-validated (estimate-first). Still open: the deferred live adapters above, and a broader multi-run calibration before the value axis could ever move from advisory to enforcing.
+⚠ Built + how it's validated: `orchestrator_host.py` + **§5.2 Nuclear (`scripts/nuclear.py`)** are built and live-validated; the **loop-evolution engine is WIRED-LIVE** and the **saturation gate is CALIBRATED + ENFORCING** (2026-06-23, 3-curve calibration — see the gate bullet above). The **N1 / N3 / N2 live adapters are WIRED and run end-to-end live, but are validated only to an ADVISORY bar** — each carries the measured scope + the honest limit named in the bullet above (N1 = anti-out-of-corpus, not a novelty oracle; N3 = confirmed on distant pairs only, soundness human-gated; N2 = count-ABC honest negative, semantic substrate deferred). The **Tier-3 value-axis + `MemoryBackend` + degeneracy detector stay ADVISORY** (the value axis is the honestly-unsolved Goodhart-hard problem). The pure core throughout (`nuclear_core`, `loop_evolution`, `n1_novelty`, `combinatorial`, `gap_channels`, `roc`, `spc`, `enrichment_stats`, `novelty_store`, `value_axis`, `memory_backend`, `spend`, `pacing`, `run_scope`) is unit-tested (**577 tests**); the live async `run` path + the operator adapters are operator-gated + smoke-validated (estimate-first). Still open: the N2 semantic substrate, human-expert gating for the N3 sound axis, broader multi-field N1 calibration, and a broader multi-run calibration before the value axis could ever move from advisory to enforcing.
 
 ## How it invokes the scripts
 
@@ -327,14 +330,103 @@ resurface = audit.generate_resurface(audit.read_ledger(ledger_path),
 
 ## Cross-references
 
+Everything under `references/` is listed here — nothing in that directory is orphaned.
+
+**Method + doctrine**
 - Anti-hallucination rules + F1 case study: `references/anti-hallucination.md`
+- **Provenance for every measured number** (scope · harness · repro command · honest limit · what is NOT verifiable from a clone): `references/measured-results.md`
 - North star (governing personality) + honesty stake: `references/north-star.md`
+- Which of the three research skills to use (labcoat vs research-resync vs deep-research): `references/research-skill-router.md`
 - Durable orchestrator host (Tier-2 shell spec + bring-up smoke checklist): `references/orchestrator-host.md`
 - Model provider risk cards (gov-adjacent-safe inputs): `references/model-risk-cards.md`
 - Output templates: `references/output-templates/{decomposition,research-stream,verification-ledger,validation-record,ranked-synthesis}.md`
 - Seed source list: `references/good-sources.md`
-- Scripts (23): `scripts/{fleet,redaction_gate,novelty_log,route_integration,model_selector,spend,audit,north_star,orchestrator,orchestrator_host,pacing,novelty_gate,novelty_store,nuclear_core,nuclear,value_axis,memory_backend,smoke_host,loop_evolution,run_scope,n1_novelty,combinatorial,gap_channels}.py` — fleet runner · redaction v2 gate · novelty log · sonar-router wrapper · model-selection · spend/tolerance/quota + R8 burn gate · audit-trail · north-star ethos · durable-orchestrator decision core · durable host (fleet loop driver) · pacing/quota · novelty/saturation gate (calibrated + enforcing) · novelty seen-set/corpus persistence · Nuclear pure core (parsers/decision/prompt builders) · §5.2 Nuclear async multi-loop engine (operator entrypoint) · Tier-3 value-axis (advisory quality + degeneracy detector) · pluggable MemoryBackend (SQLite bi-temporal+provenance / file) · host live-smoke · **loop-evolution next-question generator (WIRED-LIVE)** · **run-scoped ids (C1 fix)** · **N1 literature-grounded novelty (RND scorer + injected-index adapter; ADVISORY/deferred adapter)** · **N3 combinatorial synthesis (MAP-Elites + multiplicative creativity + proposer⊥judge; ADVISORY/deferred adapter)** · **N2 gap/whitespace channels (ABC + future-work + contradiction → reconciliation; ADVISORY/deferred adapter)**.
-- Tests: `tests/` (run `python -m pytest tests/ -q` from the skill root)
+
+**Frozen pre-registrations (the honesty record — read these first if you are auditing a claim)**
+- `references/n2-crosslit-prereg.md` — committed **BEFORE** the N2 cross-literature run to lock every knob, with pre-committed PASS/VOID/KILL semantics and an explicit anti-rescue rule (no config-relaxation run can upgrade the verdict). The run then returned a **KILL**, and it was published as one.
+- `references/n2-crosslit-optionC-prereg.md` — the Option-C gate-discrimination pre-registration; its own decision rule returned **INCONCLUSIVE (underpowered)**, and that is what is reported.
+
+**Operator runbooks (how to reproduce the live claims)**
+- `references/n1-live-runbook.md` — the live N1 adapter (SPECTER2 + faiss index) bring-up.
+- `references/n1-openalex-runbook.md` — the OpenAlex ~25k-work deep-corpus build behind the N1 AUROC result.
+- `references/n1-offdist-roc-runbook.md` — the off-distribution **ROC harness** that produced the measured AUROC 0.889 [0.874, 0.904].
+- `references/n2-live-runbook.md` — the N2 gap/whitespace channels (free path; no ML extras needed).
+- `references/n3-live-runbook.md` — the N3 combinatorial propose→judge→ground slice, and the scope of the Stage-B distance CONFIRM.
+- `references/spc-detector-runbook.md` — the Poisson-CUSUM yield-collapse detector (owner-gated upgrade; the K-rule stays default).
+- Scripts (47), grouped. Pure cores are stdlib-only + unit-tested; operator entrypoints (marked ⚙) are live shells — NOT unit-tested, estimate-first, tolerance-gated, keys loaded in-process and never printed.
+
+  **Core pipeline (9)**
+  | Script | Role |
+  |---|---|
+  | `fleet.py` | parallel multi-model fleet runner (reasoning-safe defaults; no secrets in results) |
+  | `redaction_gate.py` | fail-closed v2 two-class outbound gate (Class-A halt / Class-B typed placeholders) |
+  | `novelty_log.py` | persistent high-signal source-domain log |
+  | `route_integration.py` | sonar-router wrapper with a safe-default degrade |
+  | `model_selector.py` | fleet proposal — risk cards, `gov_adjacent_safe`, Sonar-split advice |
+  | `spend.py` | spend/tolerance/quota tracking + the R8 burn gate + two-line estimate |
+  | `audit.py` | append-only ledger, questions log, resurface buckets |
+  | `north_star.py` | the governing-ethos per-phase reflections |
+  | `run_scope.py` | run-scoped ids so a shared workspace never collides across questions |
+
+  **Durable autonomy (11)**
+  | Script | Role |
+  |---|---|
+  | `orchestrator.py` | pure per-loop decision core (pacing + tolerance → continue/pause/stop) |
+  | `orchestrator_host.py` | durable fleet-loop driver (record-before-call fsync + reservation) |
+  | `pacing.py` | rate-limit / quota signals → proceed / graceful-pause / hard-stop |
+  | `novelty_gate.py` | CNY saturation gate + SPC yield-collapse (CALIBRATED + ENFORCING) |
+  | `novelty_store.py` | novelty seen-set / corpus / CNY-history persistence |
+  | `nuclear_core.py` | Nuclear pure core (parsers, decisions, prompt builders) |
+  | `nuclear.py` | ⚙ §5.2 async multi-loop autonomous engine (operator entrypoint) |
+  | `loop_evolution.py` | loop-evolution next-question generator (WIRED-LIVE) |
+  | `value_axis.py` | Tier-3 advisory quality axis + degeneracy detector |
+  | `memory_backend.py` | pluggable MemoryBackend (SQLite bi-temporal+provenance / flat file) |
+  | `smoke_host.py` | ⚙ durable-host live smoke |
+
+  **N1 — literature-grounded novelty (10; live, ADVISORY: anti-out-of-corpus, not a novelty oracle)**
+  | Script | Role |
+  |---|---|
+  | `n1_novelty.py` | pure RND relative-neighbor-density scorer + date-cutoff + index seam |
+  | `n1_corpus.py` | arXiv corpus shell — pure Atom parse + cached fetch |
+  | `n1_corpus_openalex.py` | OpenAlex corpus adapter (free, no key) — pure normalize/reconstruct |
+  | `n1_embedder.py` | pinned citation-aware embedder (SPECTER2 asymmetric two-adapter) |
+  | `n1_index.py` | faiss IndexFlatIP ANN index agreeing with the pure in-memory oracle |
+  | `n1_build.py` | shared embed → build → calibrate → save flow (source-agnostic) |
+  | `n1_distance_fn.py` | Seam-1 adapter — embedder → a `(a,b)→[0,1]` distance_fn |
+  | `build_openalex_index.py` | ⚙ deep-corpus snapshot build over ~10 OpenAlex concepts |
+  | `smoke_n1_live.py` | ⚙ live N1 smoke (downloads SPECTER2, builds a real index) |
+  | `n1_redteam.py` | ⚙ embedder red-team / bake-off (paraphrase + jargon-inflation) |
+
+  **N3 — combinatorial / analogical synthesis (6; live, ADVISORY: confirmed on DISTANT pairs only; sound axis human-gated)**
+  | Script | Role |
+  |---|---|
+  | `combinatorial.py` | pure MAP-Elites archive + multiplicative creativity + proposer⊥judge |
+  | `combine_live.py` | ⚙ the live propose → N1-novelty → judge → ground loop |
+  | `stage_a.py` | pure Stage-A measurement core (cite-or-fail prior-art, blinding, attribution) |
+  | `stage_a_measure.py` | ⚙ Stage-A live machinery-attribution + ruler-validity run |
+  | `stage_b.py` | pure Stage-B core (dual-leg prior-art, soundness panel, cluster-robust stats) |
+  | `stage_b_measure.py` | ⚙ Stage-B live powered measurement run |
+
+  **N2 — gap / whitespace channels (7; live, HONEST NEGATIVE on the count-ABC channel)**
+  | Script | Role |
+  |---|---|
+  | `gap_channels.py` | pure ABC + future-work + contradiction → reconciliation, PPMI-context + hub-exclusion |
+  | `gaps_live.py` | ⚙ live gap channels over a real corpus (free stdlib path) |
+  | `n2_extract_llm.py` | LLM-tagged extraction — pure prompt/parse/ground + injected-brain shell |
+  | `pubmed_adapter.py` | PubMed/MEDLINE E-utilities adapter (free; XXE/entity-expansion hardened) |
+  | `n2_crosslit.py` | answer-blind cross-literature ABC pipeline over a PubMed/MeSH corpus |
+  | `n2_crosslit_measure.py` | pure known-answer (Swanson) measurement → VOID/KILL/PASS verdict |
+  | `n2_feasibility.py` | pure Phase-0 feasibility probe — can a sub-corpus carry the bridge before spend |
+
+  **Measurement / statistics cores (4; pure, stdlib only — never scipy/numpy)**
+  | Script | Role |
+  |---|---|
+  | `roc.py` | pure OOD evaluation — AUROC, FPR@TPR95, stratified-bootstrap CIs |
+  | `n1_offdist_roc.py` | ⚙ the live off-distribution ROC harness (calib/test split, field-stratified) |
+  | `spc.py` | pure count-data Poisson-CUSUM yield-collapse detector (owner-gated upgrade; the K-rule stays default) |
+  | `enrichment_stats.py` | pure size-stratified empirical-null percentile + exact binomial (Clopper-Pearson) enrichment |
+- Tests: `tests/` — `pip install -r requirements.txt -r requirements-dev.txt` then `python -m pytest tests/ -q` from the skill root (**577 tests**; 570 passed / 7 skipped without the optional `requirements-n1.txt` ML extras — the skips are the live-N1 adapter tests). `pytest-asyncio` is required, not optional: two tests are `async`.
+- Reference docs: `references/` — the method/doctrine docs, the **frozen pre-registrations**, and the per-axis operator runbooks. See §"Cross-references" above for the full annotated list.
 - Companion skill (per-query routing): [`sonar-router`](https://github.com/Polycentric-Labs/sonar-router)
 
 ## Validation
