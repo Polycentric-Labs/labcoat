@@ -43,3 +43,13 @@ pre-split commit, and 2026-07-19 is NOT a freeze time. Where a freeze commit is 
 | event | freeze commit (post-split) | author-date (freeze) | signed | content SHA-256 | governed run | honest outcome |
 |---|---|---|---|---|---|---|
 | optionC | `6e04e6967779fcda2937faf8a8e1c2b916f7548b` | 2026-07-02T21:49:18-04:00 | True | `912d98ce004d2083cbd80604038d069296b20146f299d056582ca526667be1e4` | size-band empirical-null percentile + exact binomial (Clopper-Pearson) enrichment test; owner-ratified n=3 strict-clean primary + n=5 sensitivity; answer-blind per-positive corpora | INCONCLUSIVE (underpowered -- clean time-sliced Swanson gold is scarce; only 2 strict-clean pairs survived boundary triage) + a per-pair honest negative: the n=1 gate-clearance does NOT reproduce |
+
+## `references/divergence-prereg.md`
+
+- current blob SHA-256: `d14f5a39b54bc99871ebf3001f4d079686fc5695aa10055c1d0bcf40f765a14a`
+- last-frozen blob SHA-256: `ed74b1fe7891e680b91c95422c2bc6529e55a13cede51c348399e8015dcfe13f` — current DIFFERS from the last frozen state (see drift note below).
+- drift: current differs from last-frozen ONLY by mirror-safety redaction of private-path references (genericized to "private working data"); no pre-registered knob, criterion, statistic, or endpoint changed.
+
+| event | freeze commit (post-split) | author-date (freeze) | signed | content SHA-256 | governed run | honest outcome |
+|---|---|---|---|---|---|---|
+| divergence-retro | `4fa0cd031f40469c750b687d1f0f619411e58d36` | 2026-07-19T13:02:08-04:00 | True | `ed74b1fe7891e680b91c95422c2bc6529e55a13cede51c348399e8015dcfe13f` | AUROC of (D-1)/(V-1) vendor-collapsed divergence vs fabricated-vs-confirmed label (roc.py Mann-Whitney + auc_ci bootstrap); k_min=15, seed=20260719, n_boot=2000; secondary = (fabricated U misleading) vs confirmed | INCONCLUSIVE (primary n_fabricated=3 < k_min=15; secondary n=6 < 15) on 38 curated shared-referent slots. Structural finding: fabrications were mostly SOLO (single-vendor, invisible to a cross-vendor statistic), and the recovered shared-referent slots skew high-divergence across ALL labels (confirmed mean 0.807 vs fabricated 0.944) -> directionally consistent with the hypothesis but unmeasurable at n=3. Machinery validated (14 tests); the instrument accumulates forward calibration. |
