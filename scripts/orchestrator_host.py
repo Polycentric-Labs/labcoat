@@ -76,6 +76,7 @@ def run_loop(work: list[dict], *, ledger_path: str, loop_id: str, clock, fleet_r
     (a Class-A secret hard-block never leaves the machine + must be rotated)."""
     sel = select_work(work, audit.read_ledger(ledger_path))
     driven, halted, error = 0, False, None
+    driven_results = []                          # {query_id, sub_question, result} for the archive capture hook
     for w in sel:
         try:
             out = drive_query(w, loop_id=loop_id, ledger_path=ledger_path, tracker=tracker, available=available,
@@ -88,6 +89,8 @@ def run_loop(work: list[dict], *, ledger_path: str, loop_id: str, clock, fleet_r
             halted = True
             break
         driven += 1
+        driven_results.append({"query_id": w["query_id"], "sub_question": w["sub_question"],
+                               "result": out["result"]})
     # per-loop gate: would the NEXT loop breach tolerance on the pessimistic (committed + reserved) total?
     spent = tracker.breakdown()["total_with_reserved_usd"]
     breach = spend.would_next_loop_breach(spent, next_loop_est, tolerance)
@@ -97,4 +100,4 @@ def run_loop(work: list[dict], *, ledger_path: str, loop_id: str, clock, fleet_r
         {"pacing_state": "proceed", "pacing_resume_after_s": None,
          "would_breach": not breach["within_tolerance"]})
     return {"decision": decision, "driven": driven, "halted": halted, "error": error,
-            "breakdown": tracker.breakdown()}
+            "breakdown": tracker.breakdown(), "results": driven_results}

@@ -33,6 +33,7 @@ import datetime as _dt
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import audit
+import archive
 import fleet
 import redaction_gate
 import spend
@@ -276,13 +277,14 @@ async def run_loops(question: str, *, tolerance: float, max_loops: int, model_sp
                     brain_budget: float, workspace: str, client_terms, tau: float, floor: int, window: int,
                     max_subq: int, backend_kind: str = "sqlite", brain_backend: str = "or-claude-strong",
                     run_id: str | None = None, novelty_store_dir: str | None = None,
-                    novelty_enforcing: bool = True) -> dict:
+                    novelty_enforcing: bool = True, archive_enabled: bool = True) -> dict:
     """The autonomous multi-loop cycle (async). Returns the final spend breakdown. Stops on the composed
     per-loop decision (continue / pause / stop) — TOLERANCE is the hard ceiling; novelty is WARN-only.
     The Tier-3 value-axis (independent-source quality) is computed + REPORTED each loop but NEVER consumed by
     the decision (advisory until calibrated)."""
     audit_dir = pathlib.Path(workspace) / "_internal" / "audit"
     audit_dir.mkdir(parents=True, exist_ok=True)
+    archive_root = str(pathlib.Path(workspace) / "_internal" / "archive")   # durable cross-run raw-stream archive
     nov_dir = pathlib.Path(novelty_store_dir) if novelty_store_dir else audit_dir
     nov_dir.mkdir(parents=True, exist_ok=True)
     led = str(audit_dir / "SESSION-LEDGER.jsonl")
@@ -348,6 +350,14 @@ async def run_loops(question: str, *, tolerance: float, max_loops: int, model_sp
             print(f"[nuclear] fleet HALTED: {fleet_out['error'] or 'redaction hard-block'}. "
                   "If a Class-A secret triggered this, ROTATE it. Stopping."); break
         print(f"[nuclear] fleet drove {fleet_out['driven']} queries (spend ${tracker.breakdown()['total_usd']:.4f})")
+
+        # 3b. ARCHIVE (passive, fail-safe) — durably capture this loop's raw fleet answers for later retrieval.
+        if archive_enabled:
+            try:
+                archive.record_fleet_results(archive_root, run_id=rid, ts=clock(), question=question,
+                                             driven_results=fleet_out.get("results", []))
+            except Exception as e:   # noqa: BLE001 — archival must NEVER break a run
+                print(f"[nuclear] archive skipped ({type(e).__name__}: {e})")
 
         # 4. VERIFY (hard-skeptic, primary-source tools) -> CONFIRMED claim_text into the ledger
         ver = await _brain(nuclear_core.verify_prompt(_gather_findings(led, loop_id)), transport=bt, model=bm,
@@ -502,6 +512,8 @@ def main() -> None:
     rp.add_argument("--novelty-enforcing", action=argparse.BooleanOptionalAction, default=True,
                     help="ENFORCING (default, calibrated 2026-06-23): pause-and-ping on novelty yield-collapse "
                          "(corrigible — never auto-stops). --no-novelty-enforcing restores WARN-only.")
+    rp.add_argument("--archive", action=argparse.BooleanOptionalAction, default=True,
+                    help="durably archive raw fleet answers to _internal/archive/ (default ON; --no-archive skips)")
     rp.add_argument("--client-terms", nargs="*", default=[])
     rp.add_argument("--workspace", default=".")
     rp.add_argument("--run-id", default=None,
@@ -548,7 +560,7 @@ def main() -> None:
         workspace=args.workspace, client_terms=list(args.client_terms), tau=args.tau, floor=args.floor,
         window=args.window, max_subq=args.max_subq, backend_kind=args.backend,
         brain_backend=args.brain_backend, run_id=args.run_id, novelty_store_dir=args.novelty_store,
-        novelty_enforcing=args.novelty_enforcing))
+        novelty_enforcing=args.novelty_enforcing, archive_enabled=args.archive))
 
 
 if __name__ == "__main__":

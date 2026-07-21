@@ -11,7 +11,7 @@ That rule applies to labcoat's own numbers. A reader should not have to take the
 | Tier | Which numbers | What a reader can do from a clone |
 |---|---|---|
 | **Checkable offline, right now** | the saturation-gate calibration | `pytest tests/test_novelty_gate.py -q` — the curves ship as a fixture and the tests re-derive the claim. **No network, no credential.** |
-| **Reproducible, but costs time/money** | AUROC 0.889 · the N3 distance CONFIRM · the ~99.85% noise reduction | the harness ships and the command is below, but re-running needs a corpus build (hours, ~2GB of ML deps) and — for N3 — real OpenRouter spend. |
+| **Re-derivable in mechanism, but not as the same figure** | AUROC 0.889 · the N3 distance CONFIRM · the ~99.85% noise reduction | the harness ships and the command is below, but re-running needs a corpus build (hours, ~2GB of ML deps) and — for N3 — real OpenRouter spend. **For §1, a rebuild is a _new_ measurement, not a reproduction of this exact figure** — the snapshot behind 0.889 was not retained (see [Known gap](#known-gap-stated-rather-than-papered-over)). |
 | **Not independently re-derivable** | the raw per-run report JSONs | they live outside the public tree. The harnesses that regenerate them ship; the specific run artifacts do not. **This is a real gap — see "Known gap" below.** |
 
 ---
@@ -117,6 +117,16 @@ That rule applies to labcoat's own numbers. A reader should not have to take the
 The per-run report JSONs (e.g. `offdist-roc-report.json`, the Stage-B adjudication sets) are **not** in the public
 tree. So for §1 and §2 a reader gets *the harness, the command, the scope and the caveats* — but not the original
 run artifact, and re-running is not free. **Those two numbers are, from a clone, taken on trust.**
+
+**Sharper, for §1 specifically (do not soften):** the ~25k-work OpenAlex snapshot that produced 0.889 was **not
+retained** (it was gitignored and never committable), the harness serializes only per-layer *summaries* — not the
+per-item scores — and the recorded figure used a query-sampling configuration that is **not a committed flag**. The
+computation is deterministic *given a fixed snapshot*, but that snapshot is gone and OpenAlex drifts, so a fresh
+build is a **new** measurement on a drifted corpus — it does **not** reproduce this exact figure. Closing this
+honestly means either **(a)** a fresh, **pre-registered** run that publishes its number *and* a re-derivable scores
+fixture (the `tests/fixtures/novelty-gate-calibration-curves.json` pattern), or **(b)** adding per-item score
+serialization so future runs ship such a fixture by default. Until one of those lands, 0.889 is a recorded
+historical result, not a from-clone-reproducible one.
 
 Ranked honestly, the surface is: §4 checkable offline · §3's mechanism free to re-run (its headline is a KILL —
 a negative, which is the cheap direction to trust) · §1 and §2 trust-dependent. Publishing the run artifacts, or a
